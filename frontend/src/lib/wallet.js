@@ -113,15 +113,30 @@ export const SEED_BALANCE = 2450000
 // Accent + label derivation for a transaction row.
 export function rowMeta(t) {
   const masuk = t.amount > 0
-  const accent = t.type === 'TOPUP' ? '#C98A2B' : masuk ? '#2F6F4E' : '#7A3142'
-  const typeLabel = t.type === 'TOPUP' ? 'Top Up' : masuk ? 'Masuk' : 'Keluar'
+  const isPending = t.status === 'PENDING'
+  const isFailed = t.status === 'FAILED'
+
+  let accent = t.type === 'TOPUP' ? '#C98A2B' : masuk ? '#2F6F4E' : '#7A3142'
+  if (isPending) {
+    accent = '#7B8890'
+  } else if (isFailed) {
+    accent = '#7A3142'
+  }
+
+  let typeLabel = t.type === 'TOPUP' ? 'Top Up' : masuk ? 'Masuk' : 'Keluar'
+  if (isPending) {
+    typeLabel = 'Top Up (Pending)'
+  } else if (isFailed) {
+    typeLabel = 'Top Up (Gagal)'
+  }
+
   const sign = masuk ? '+' : '−'
   return {
     accent,
     typeLabel,
     counterparty: t.counterparty || '—',
     amountStr: sign + ' ' + fmtRp(t.amount),
-    balanceAfterStr: fmtRp(t.balanceAfter),
+    balanceAfterStr: isPending ? '—' : isFailed ? '—' : fmtRp(t.balanceAfter),
   }
 }
 

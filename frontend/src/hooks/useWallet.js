@@ -22,8 +22,9 @@ function normalizeTx(t) {
     type,
     counterparty,
     amount,
-    balanceAfter: Number(t.balance_after),
+    balanceAfter: t.balance_after ? Number(t.balance_after) : null,
     description: t.description || '',
+    status: t.status || 'SUCCESS',
   }
 }
 
@@ -58,10 +59,75 @@ export default function useWallet() {
 
     if (type === 'TOPUP') {
       const res = await apiPost('/topup', { amount })
-      setBalance(Number(res.wallet.balance))
-      setLastUpdate(fmtTime(now))
-      setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
-      return res.transaction
+      const snapToken = res.snap_token
+      const txCode = res.transaction.code
+
+      return new Promise((resolve, reject) => {
+        if (!window.snap) {
+          reject(new Error('Midtrans Snap SDK tidak termuat.'))
+          return
+        }
+
+        // Instantly add the pending transaction to the list so user can see it in dashboard
+        setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
+
+        window.snap.pay(snapToken, {
+          onSuccess: async function (result) {
+            try {
+              const confirmRes = await apiPost('/topup/confirm', { code: txCode })
+              setBalance(Number(confirmRes.wallet.balance))
+              setLastUpdate(fmtTime(new Date()))
+              setTransactions((prev) => {
+                const filtered = prev.filter((tx) => tx.code !== txCode)
+                return [normalizeTx(confirmRes.transaction), ...filtered]
+              })
+              resolve(confirmRes.transaction)
+            } catch (e) {
+              reject(e)
+            }
+          },
+          onPending: async function (result) {
+            try {
+              const confirmRes = await apiPost('/topup/confirm', { code: txCode })
+              setBalance(Number(confirmRes.wallet.balance))
+              setLastUpdate(fmtTime(new Date()))
+              setTransactions((prev) => {
+                const filtered = prev.filter((tx) => tx.code !== txCode)
+                return [normalizeTx(confirmRes.transaction), ...filtered]
+              })
+              resolve(confirmRes.transaction)
+            } catch (e) {
+              reject(e)
+            }
+          },
+          onError: async function (result) {
+            try {
+              const confirmRes = await apiPost('/topup/confirm', { code: txCode })
+              setTransactions((prev) => {
+                const filtered = prev.filter((tx) => tx.code !== txCode)
+                return [normalizeTx(confirmRes.transaction), ...filtered]
+              })
+              reject(new Error('Pembayaran gagal.'))
+            } catch (e) {
+              reject(e)
+            }
+          },
+          onClose: async function () {
+            try {
+              const confirmRes = await apiPost('/topup/confirm', { code: txCode })
+              setBalance(Number(confirmRes.wallet.balance))
+              setLastUpdate(fmtTime(new Date()))
+              setTransactions((prev) => {
+                const filtered = prev.filter((tx) => tx.code !== txCode)
+                return [normalizeTx(confirmRes.transaction), ...filtered]
+              })
+              resolve(confirmRes.transaction)
+            } catch (e) {
+              resolve(res.transaction)
+            }
+          }
+        })
+      })
     }
 
     if (type === 'KELUAR' && recipient) {

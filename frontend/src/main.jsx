@@ -1,12 +1,20 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import './index.css'
-import Landing from './pages/Landing.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Login from './pages/Login.jsx'
-import Register from './pages/Register.jsx'
 import { isAuthenticated } from './lib/auth.js'
+
+const Landing = lazy(() => import('./pages/Landing.jsx'))
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
+const Login = lazy(() => import('./pages/Login.jsx'))
+const Register = lazy(() => import('./pages/Register.jsx'))
+
+// Loading Spinner for Suspense Fallback
+const PageLoader = () => (
+  <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#EFF1EC', color: '#11203D', fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600 }}>
+    Memuat halaman...
+  </div>
+)
 
 function Protected({ children }) {
   return isAuthenticated() ? children : <Navigate to="/masuk" replace />
@@ -17,10 +25,10 @@ function Guest({ children }) {
 }
 
 const router = createBrowserRouter([
-  { path: '/', element: <Landing /> },
-  { path: '/masuk', element: <Guest><Login /></Guest> },
-  { path: '/daftar', element: <Guest><Register /></Guest> },
-  { path: '/dashboard', element: <Protected><Dashboard /></Protected> },
+  { path: '/', element: <Suspense fallback={<PageLoader />}><Landing /></Suspense> },
+  { path: '/masuk', element: <Suspense fallback={<PageLoader />}><Guest><Login /></Guest></Suspense> },
+  { path: '/daftar', element: <Suspense fallback={<PageLoader />}><Guest><Register /></Guest></Suspense> },
+  { path: '/dashboard', element: <Suspense fallback={<PageLoader />}><Protected><Dashboard /></Protected></Suspense> },
 ])
 
 ReactDOM.createRoot(document.getElementById('root')).render(

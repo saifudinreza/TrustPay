@@ -13,6 +13,7 @@ class Transaction extends Model
         'user_id',
         'counterpart_user_id',
         'type',
+        'status',
         'amount',
         'balance_after',
         'description',

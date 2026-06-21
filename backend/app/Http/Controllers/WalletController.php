@@ -25,10 +25,31 @@ class WalletController extends Controller
         $result = $this->walletService->topUp($request->user(), (int) $request->amount);
 
         return response()->json([
-            'message'     => 'Top up berhasil.',
-            'wallet'      => ['balance' => (float) $result['wallet']->balance],
-            'transaction' => $this->formatTx($result['transaction']),
+            'message'      => 'Top up diinisialisasi.',
+            'snap_token'   => $result['snap_token'],
+            'redirect_url' => $result['redirect_url'],
+            'transaction'  => $this->formatTx($result['transaction']),
         ]);
+    }
+
+    public function confirmTopUp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code' => 'required|string|exists:transactions,code',
+        ]);
+
+        try {
+            $result = $this->walletService->checkAndUpdateStatus($request->code);
+
+            return response()->json([
+                'message'     => 'Status transaksi diperbarui.',
+                'transaction' => $this->formatTx($result['transaction']),
+                'wallet'      => ['balance' => (float) $result['wallet']->balance],
+            ]);
+        } catch (\DomainException $e) {
+            $status = $e->getCode() ?: 400;
+            return response()->json(['message' => $e->getMessage()], $status);
+        }
     }
 
     public function transfer(TransferRequest $request): JsonResponse
@@ -74,8 +95,9 @@ class WalletController extends Controller
             'id'               => $tx->id,
             'code'             => $tx->code,
             'type'             => $tx->type,
+            'status'           => $tx->status,
             'amount'           => (float) $tx->amount,
-            'balance_after'    => (float) $tx->balance_after,
+            'balance_after'    => $tx->balance_after !== null ? (float) $tx->balance_after : null,
             'description'      => $tx->description,
             'transfer_code'    => $tx->transfer_code,
             'counterpart_user' => $cu ? ['id' => $cu->id, 'name' => $cu->name, 'username' => $cu->username] : null,

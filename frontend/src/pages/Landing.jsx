@@ -7,6 +7,7 @@ import { CheckIcon } from '../components/icons.jsx'
 export default function Landing() {
   return (
     <div
+      className="page-enter"
       style={{
         minHeight: '100vh',
         background:

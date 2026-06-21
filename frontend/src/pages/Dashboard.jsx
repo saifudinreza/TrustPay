@@ -144,6 +144,7 @@ export default function Dashboard() {
 
   return (
     <div
+      className="page-enter"
       style={{
         minHeight: '100vh',
         background:

@@ -11,6 +11,9 @@ Route::post('/login',    [AuthController::class, 'login']);              // utam
 Route::post('/login/request-otp', [AuthController::class, 'requestLoginOtp']); // phone → kirim OTP
 Route::post('/verify-otp',        [AuthController::class, 'verifyOtp']);       // phone+code → token
 
+// Midtrans Webhook
+Route::post('/webhooks/midtrans', [\App\Http\Controllers\MidtransWebhookController::class, 'handleNotification']);
+
 // ---- protected ----
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -18,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/wallet',       [WalletController::class, 'show']);
     Route::post('/topup',       [WalletController::class, 'topup']);
+    Route::post('/topup/confirm',[WalletController::class, 'confirmTopUp']);
     Route::post('/transfer',    [WalletController::class, 'transfer']);
     Route::get('/transactions', [WalletController::class, 'transactions']);
 });

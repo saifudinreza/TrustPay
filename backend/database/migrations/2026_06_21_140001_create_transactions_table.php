@@ -15,8 +15,9 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('counterpart_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('type', ['TOPUP', 'TRANSFER_IN', 'TRANSFER_OUT']);
+            $table->enum('status', ['PENDING', 'SUCCESS', 'FAILED'])->default('SUCCESS');
             $table->decimal('amount', 15, 2);
-            $table->decimal('balance_after', 15, 2);
+            $table->decimal('balance_after', 15, 2)->nullable();
             $table->string('description')->nullable();
             $table->timestamps();
 

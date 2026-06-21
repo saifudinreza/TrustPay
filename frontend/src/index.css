@@ -14,6 +14,94 @@
   --r-button: 10px;
 }
 
+/* ===== page transition animations ===== */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pageSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes pageSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-fade-in {
+  animation: pageFadeIn 0.4s ease-out both;
+}
+.page-slide-left {
+  animation: pageSlideLeft 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-slide-right {
+  animation: pageSlideRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* stagger children inside auth forms */
+.auth-form-enter > * {
+  animation: pageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.auth-form-enter > *:nth-child(1) { animation-delay: 0.04s; }
+.auth-form-enter > *:nth-child(2) { animation-delay: 0.08s; }
+.auth-form-enter > *:nth-child(3) { animation-delay: 0.12s; }
+.auth-form-enter > *:nth-child(4) { animation-delay: 0.16s; }
+.auth-form-enter > *:nth-child(5) { animation-delay: 0.20s; }
+.auth-form-enter > *:nth-child(6) { animation-delay: 0.24s; }
+.auth-form-enter > *:nth-child(7) { animation-delay: 0.28s; }
+.auth-form-enter > *:nth-child(8) { animation-delay: 0.32s; }
+.auth-form-enter > *:nth-child(9) { animation-delay: 0.36s; }
+.auth-form-enter > *:nth-child(10) { animation-delay: 0.40s; }
+
+/* nav CTA link transition (Masuk / Daftar buttons) */
+.nav-cta {
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.nav-cta:active {
+  transform: scale(0.95);
+}
+.cta-gold {
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.cta-gold:active {
+  transform: scale(0.96) translateY(0) !important;
+}
+.cta-ghost {
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.cta-ghost:active {
+  transform: scale(0.96);
+}
+
 * {
   box-sizing: border-box;
 }

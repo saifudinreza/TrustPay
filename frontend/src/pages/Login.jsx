@@ -75,7 +75,7 @@ export default function Login() {
     <AuthShell tagline={'"Setiap rupiah tercatat,\nsetiap waktu."'}>
       {/* ===== METODE UTAMA: email/username + password ===== */}
       {mode === 'password' && (
-        <form onSubmit={onPwdSubmit} style={{ width: '100%', maxWidth: 380 }}>
+        <form onSubmit={onPwdSubmit} className="auth-form-enter" style={{ width: '100%', maxWidth: 380 }}>
           <h1 style={titleStyle}>Masuk ke Wallet</h1>
           <div style={ruleStyle} />
 

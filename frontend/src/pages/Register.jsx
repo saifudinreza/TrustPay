@@ -49,7 +49,7 @@ export default function Register() {
 
   return (
     <AuthShell tagline={'Buka buku tabungan\ndigitalmu — gratis\n& tercatat rapi.'}>
-      <form onSubmit={onSubmit} style={{ width: '100%', maxWidth: 400 }}>
+      <form onSubmit={onSubmit} className="auth-form-enter" style={{ width: '100%', maxWidth: 400 }}>
         <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: '#11203D' }}>
           Daftar Akun
         </h1>
