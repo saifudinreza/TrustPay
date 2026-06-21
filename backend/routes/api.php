@@ -1,0 +1,23 @@
+<?php
+
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\WalletController;
+use Illuminate\Support\Facades\Route;
+
+// ---- public auth ----
+Route::post('/register', [AuthController::class, 'register']);           // utama: email/username + password → token
+Route::post('/login',    [AuthController::class, 'login']);              // utama: email/username + password → token
+// bonus: login via OTP WhatsApp (Fonnte)
+Route::post('/login/request-otp', [AuthController::class, 'requestLoginOtp']); // phone → kirim OTP
+Route::post('/verify-otp',        [AuthController::class, 'verifyOtp']);       // phone+code → token
+
+// ---- protected ----
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me',      [AuthController::class, 'me']);
+
+    Route::get('/wallet',       [WalletController::class, 'show']);
+    Route::post('/topup',       [WalletController::class, 'topup']);
+    Route::post('/transfer',    [WalletController::class, 'transfer']);
+    Route::get('/transactions', [WalletController::class, 'transactions']);
+});

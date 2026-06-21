@@ -1,0 +1,332 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #11203d;
+  --paper: #eff1ec;
+  --stamp: #c98a2b;
+  --masuk: #2f6f4e;
+  --keluar: #7a3142;
+  --tepi: #5c6b73;
+  --r-card: 16px;
+  --r-input: 10px;
+  --r-button: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #eff1ec;
+  color: #11203d;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+input {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+/* ===== keyframes (ported from design) ===== */
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+@keyframes stampPulse {
+  0% {
+    transform: rotate(-8deg) scale(1);
+  }
+  50% {
+    transform: rotate(-8deg) scale(1.04);
+  }
+  100% {
+    transform: rotate(-8deg) scale(1);
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes stampIn {
+  0% {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.5);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+@keyframes balanceFade {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* focus visibility — design §6 (outline 2px stamp, offset 2px) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-floatwrap],
+  [data-skel],
+  [data-balance],
+  [data-stamp] {
+    animation: none !important;
+  }
+}
+
+/* ===== hover states (ported from design `style-hover`) ===== */
+.nav-cta:hover {
+  background: #11203d;
+  color: #eff1ec !important;
+}
+.cta-gold:hover {
+  background: #b87d22;
+  transform: translateY(-1px);
+}
+.cta-ghost:hover {
+  border-color: #11203d;
+  background: rgba(17, 32, 61, 0.04);
+}
+
+/* ===== responsive: Landing ===== */
+@media (max-width: 980px) {
+  .hero {
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding-top: 24px !important;
+  }
+  .hero-copy {
+    max-width: 100% !important;
+    text-align: center !important;
+    align-items: center !important;
+  }
+  .hero-cta {
+    justify-content: center !important;
+  }
+  [data-scene-box] {
+    transform: scale(0.82) !important;
+    margin-top: -10px !important;
+  }
+  [data-trustline] {
+    justify-content: center !important;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 560px) {
+  [data-scene-box] {
+    transform: scale(0.62) !important;
+    height: 430px !important;
+  }
+  .feat-grid {
+    grid-template-columns: 1fr !important;
+  }
+  [data-row] {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* ===== responsive: Dashboard ===== */
+@media (max-width: 900px) {
+  .dash-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 560px) {
+  .dash-grid [data-row] {
+    flex-wrap: wrap !important;
+    gap: 8px 12px !important;
+  }
+  .dash-grid [data-row] [data-balcol] {
+    width: 100% !important;
+    text-align: left !important;
+  }
+}
+
+/* ===== quick actions + ledger row hover ===== */
+.qa-btn {
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+.qa-btn:hover {
+  background: rgba(17, 32, 61, 0.04) !important;
+  border-color: rgba(17, 32, 61, 0.08) !important;
+  transform: translateY(-2px);
+}
+.qa-btn:active {
+  transform: translateY(0);
+}
+.ledger-row {
+  transition: background 0.14s ease;
+}
+.ledger-row:hover {
+  background: #fafbf7;
+}
+
+/* ===== wallet "buku tabungan" card ===== */
+.wallet-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 32px 60px -20px rgba(17, 32, 61, 0.68);
+}
+.wallet-sheen {
+  transform: translateX(-120%);
+}
+.wallet-card:hover .wallet-sheen {
+  animation: sheenSweep 0.9s ease;
+}
+@keyframes sheenSweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(230%);
+  }
+}
+
+/* ===== primary/ghost action buttons + icon buttons ===== */
+.act-btn {
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.act-btn:hover {
+  transform: translateY(-1px);
+}
+.act-btn:active {
+  transform: translateY(0);
+}
+.icon-btn {
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.icon-btn:hover {
+  color: #7a3142 !important;
+  border-color: rgba(122, 49, 66, 0.4) !important;
+  background: rgba(122, 49, 66, 0.06) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-card:hover .wallet-sheen {
+    animation: none;
+  }
+  .wallet-card:hover,
+  .qa-btn:hover,
+  .act-btn:hover {
+    transform: none;
+  }
+}
+
+/* ===== monthly summary responsive ===== */
+@media (max-width: 560px) {
+  .summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ===== print / PDF export ===== */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* hide everything, then reveal only the targeted region */
+  body * {
+    visibility: hidden;
+  }
+  .no-print {
+    display: none !important;
+  }
+
+  /* ledger export (triggered via body.printing-ledger) */
+  #print-ledger {
+    display: none;
+  }
+  body.printing-ledger #print-ledger {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+  }
+  body.printing-ledger #print-ledger,
+  body.printing-ledger #print-ledger * {
+    visibility: visible;
+  }
+
+  /* single receipt (ReceiptModal prints itself directly) */
+  #receipt-print,
+  #receipt-print * {
+    visibility: visible;
+  }
+  #receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: none !important;
+  }
+}
+
+/* ===== responsive: Login ===== */
+@media (max-width: 760px) {
+  .login-shell {
+    flex-direction: column !important;
+  }
+  .login-panel {
+    width: 100% !important;
+    min-height: 140px;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 20px 24px !important;
+  }
+  .login-panel > div:last-child {
+    display: none;
+  }
+}
