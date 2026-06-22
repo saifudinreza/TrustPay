@@ -158,23 +158,23 @@ export function primaryBtn(enabled) {
     width: '100%', marginTop: 24, padding: '14px 0', borderRadius: 10, border: 'none',
     fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, fontWeight: 700,
     cursor: enabled ? 'pointer' : 'not-allowed',
-    background: enabled ? '#C98A2B' : 'rgba(92,107,115,0.18)',
-    color: enabled ? '#1a1205' : '#5C6B73',
-    boxShadow: enabled ? '0 10px 22px -10px rgba(201,138,43,0.7)' : 'none',
+    background: enabled ? '#BEF264' : 'rgba(92,107,115,0.18)',
+    color: enabled ? '#16210A' : '#5C6B73',
+    boxShadow: enabled ? '0 10px 22px -10px rgba(190,242,100,0.7)' : 'none',
     transition: 'background .15s, transform .15s',
   }
 }
 
-const titleStyle = { fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: '#11203D' }
-const ruleStyle = { height: 3, width: 44, background: '#C98A2B', borderRadius: 2, marginBottom: 24 }
-const fieldLabel = { display: 'block', fontSize: 14, fontWeight: 600, color: '#11203D', marginBottom: 8 }
-const inputStyle = { width: '100%', height: 50, padding: '0 14px', borderRadius: 10, border: '1.5px solid rgba(17,32,61,0.18)', background: '#fbfcf9', outline: 'none', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, color: '#11203D' }
+const titleStyle = { fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: '#17191D' }
+const ruleStyle = { height: 3, width: 44, background: '#BEF264', borderRadius: 2, marginBottom: 24 }
+const fieldLabel = { display: 'block', fontSize: 14, fontWeight: 600, color: '#17191D', marginBottom: 8 }
+const inputStyle = { width: '100%', height: 50, padding: '0 14px', borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.18)', background: '#fbfcf9', outline: 'none', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, color: '#17191D' }
 const leadIcon = { position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#5C6B73', display: 'flex' }
 const eyeBtn = { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', height: 38, width: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#5C6B73', borderRadius: 8 }
 const alertStyle = { marginBottom: 20, padding: '12px 14px', borderRadius: 10, background: 'rgba(122,49,66,0.08)', border: '1px solid rgba(122,49,66,0.25)', color: '#7A3142', fontSize: 14, fontWeight: 500 }
 const footStyle = { marginTop: 18, fontSize: 14, color: '#5C6B73', textAlign: 'center' }
-const linkStyle = { color: '#C98A2B', fontWeight: 600, textDecoration: 'none' }
-const altBtn = { width: '100%', marginTop: 12, padding: '12px 0', borderRadius: 10, border: '1.5px solid rgba(17,32,61,0.18)', background: 'transparent', color: '#11203D', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+const linkStyle = { color: '#4D7C0F', fontWeight: 600, textDecoration: 'none' }
+const altBtn = { width: '100%', marginTop: 12, padding: '12px 0', borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.18)', background: 'transparent', color: '#17191D', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
 const dividerWrap = { display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0 4px' }
-const dividerLine = { flex: 1, height: 1, background: 'rgba(17,32,61,0.12)' }
+const dividerLine = { flex: 1, height: 1, background: 'rgba(23,25,29,0.12)' }
 const dividerText = { fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#5C6B73' }

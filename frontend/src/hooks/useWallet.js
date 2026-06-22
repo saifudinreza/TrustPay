@@ -3,20 +3,27 @@ import { apiGet, apiPost } from '../lib/api.js'
 import { clearSession } from '../lib/auth.js'
 import { fmtDate, fmtTime } from '../lib/wallet.js'
 
-// Map backend types to the display types rowMeta() / frontend expect.
+/**
+ * Normalisasi satu baris transaksi dari format backend (TRANSFER_IN/OUT/TOPUP)
+ * ke format yang dipakai komponen frontend (MASUK/KELUAR/TOPUP + tanda +/-).
+ *
+ * Catatan: `amount` selalu positif dari backend; tanda diturunkan dari tipe.
+ */
 function normalizeTx(t) {
   const d = new Date(t.created_at)
   const typeMap = { TRANSFER_IN: 'MASUK', TRANSFER_OUT: 'KELUAR', TOPUP: 'TOPUP' }
   const type = typeMap[t.type] || t.type
+  // Nominal: negatif untuk KELUAR, positif untuk MASUK dan TOPUP
   const amount = type === 'KELUAR' ? -Math.abs(Number(t.amount)) : Math.abs(Number(t.amount))
   const cu = t.counterpart_user
+  // Label lawan transaksi: "dari Budi" untuk masuk, "ke Siti" untuk keluar
   const counterparty = cu
     ? type === 'MASUK' ? `dari ${cu.name}` : `ke ${cu.name}`
     : '—'
   return {
     id: t.id,
     code: t.code,
-    ts: d.getTime(),
+    ts: d.getTime(),          // timestamp ms untuk filter & sort
     dateStr: fmtDate(d),
     timeStr: fmtTime(d),
     type,
@@ -24,22 +31,38 @@ function normalizeTx(t) {
     amount,
     balanceAfter: t.balance_after ? Number(t.balance_after) : null,
     description: t.description || '',
-    status: t.status || 'SUCCESS',
+    status: t.status || 'SUCCESS', // PENDING | SUCCESS | FAILED (untuk TOPUP Midtrans)
   }
 }
 
+/**
+ * useWallet — hook yang mengelola saldo dan riwayat transaksi dari API.
+ *
+ * State:
+ *  - hydrated    → true setelah fetch awal selesai (untuk skeleton loading)
+ *  - balance     → saldo saat ini (angka, bukan string)
+ *  - transactions→ array transaksi ternormalisasi, terbaru dulu
+ *  - lastUpdate  → waktu terakhir saldo diperbarui (hanya untuk tampilan)
+ *
+ * Mutasi (applyTransaction) mendukung TOPUP via Midtrans Snap dan TRANSFER real.
+ * Pembayaran tagihan (Pulsa/PLN/dll) adalah simulasi UI saja — tidak menyentuh API.
+ */
 export default function useWallet() {
   const [hydrated, setHydrated] = useState(false)
   const [balance, setBalance] = useState(0)
   const [transactions, setTransactions] = useState([])
   const [lastUpdate, setLastUpdate] = useState('—')
 
+  /** Jika API balas 401, bersihkan sesi dan redirect ke halaman login */
   const redirect401 = useCallback(() => {
     clearSession()
     window.location.href = '/masuk'
   }, [])
 
-  // Initial load: fetch wallet + transaction list from API.
+  /**
+   * Fetch awal: ambil saldo + riwayat secara paralel saat mount.
+   * Gagal 401 → redirect login; gagal lain → biarkan (hydrated tetap jadi true).
+   */
   useEffect(() => {
     Promise.all([apiGet('/wallet'), apiGet('/transactions')])
       .then(([walletRes, txRes]) => {
@@ -51,13 +74,27 @@ export default function useWallet() {
       .finally(() => setHydrated(true))
   }, [redirect401])
 
-  // Handles TOPUP (→ POST /api/topup) and real transfers (→ POST /api/transfer).
-  // Bill payment quick-actions are NOT wired to the API (they update state locally
-  // but do not persist — balance corrects itself on next page load from the API).
+  /**
+   * applyTransaction — eksekusi mutasi saldo.
+   *
+   * Kasus TOPUP:
+   *  1. POST /topup → dapat snap_token + transaksi PENDING
+   *  2. Buka Midtrans Snap popup
+   *  3. Pada setiap callback Snap (sukses/pending/error/tutup) →
+   *     POST /topup/confirm untuk sinkronkan status dari Midtrans API
+   *
+   * Kasus TRANSFER (KELUAR + recipient):
+   *  - POST /transfer → saldo pengirim langsung diupdate oleh backend
+   *
+   * Kasus SIMULASI (tagihan Pulsa/PLN/Air/Internet):
+   *  - Tidak menyentuh API; kembalikan objek dummy dengan flag `simulated: true`.
+   *    Saldo dan riwayat TIDAK diubah agar tidak desync dengan server.
+   */
   const applyTransaction = useCallback(async ({ type, amount, recipient, description = '' }) => {
     const now = new Date()
 
     if (type === 'TOPUP') {
+      // Langkah 1: inisialisasi transaksi di backend + dapatkan snap_token Midtrans
       const res = await apiPost('/topup', { amount })
       const snapToken = res.snap_token
       const txCode = res.transaction.code
@@ -68,11 +105,26 @@ export default function useWallet() {
           return
         }
 
-        // Instantly add the pending transaction to the list so user can see it in dashboard
+        // Tampilkan transaksi PENDING langsung di daftar agar user tahu sedang diproses
         setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
 
         window.snap.pay(snapToken, {
-          onSuccess: async function (result) {
+          // Pembayaran berhasil → konfirmasi ke backend untuk sinkronkan status
+          onSuccess: async function () {
+            try {
+              const confirmRes = await apiPost('/topup/confirm', { code: txCode })
+              setBalance(Number(confirmRes.wallet.balance))
+              setLastUpdate(fmtTime(new Date()))
+              // Ganti baris PENDING dengan baris SUCCESS terbaru
+              setTransactions((prev) => {
+                const filtered = prev.filter((tx) => tx.code !== txCode)
+                return [normalizeTx(confirmRes.transaction), ...filtered]
+              })
+              resolve(confirmRes.transaction)
+            } catch (e) { reject(e) }
+          },
+          // Pembayaran pending (transfer bank, dll) → cek status awal
+          onPending: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
               setBalance(Number(confirmRes.wallet.balance))
@@ -82,25 +134,10 @@ export default function useWallet() {
                 return [normalizeTx(confirmRes.transaction), ...filtered]
               })
               resolve(confirmRes.transaction)
-            } catch (e) {
-              reject(e)
-            }
+            } catch (e) { reject(e) }
           },
-          onPending: async function (result) {
-            try {
-              const confirmRes = await apiPost('/topup/confirm', { code: txCode })
-              setBalance(Number(confirmRes.wallet.balance))
-              setLastUpdate(fmtTime(new Date()))
-              setTransactions((prev) => {
-                const filtered = prev.filter((tx) => tx.code !== txCode)
-                return [normalizeTx(confirmRes.transaction), ...filtered]
-              })
-              resolve(confirmRes.transaction)
-            } catch (e) {
-              reject(e)
-            }
-          },
-          onError: async function (result) {
+          // Pembayaran gagal → tandai FAILED di list
+          onError: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
               setTransactions((prev) => {
@@ -108,10 +145,9 @@ export default function useWallet() {
                 return [normalizeTx(confirmRes.transaction), ...filtered]
               })
               reject(new Error('Pembayaran gagal.'))
-            } catch (e) {
-              reject(e)
-            }
+            } catch (e) { reject(e) }
           },
+          // User menutup popup Snap → tetap cek status (mungkin sudah dibayar di bank)
           onClose: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
@@ -123,13 +159,15 @@ export default function useWallet() {
               })
               resolve(confirmRes.transaction)
             } catch (e) {
+              // Jika konfirmasi gagal, biarkan transaksi tetap PENDING
               resolve(res.transaction)
             }
-          }
+          },
         })
       })
     }
 
+    // Transfer ke user lain — POST /transfer, saldo diupdate atomik di backend
     if (type === 'KELUAR' && recipient) {
       const res = await apiPost('/transfer', { recipient, amount, description })
       setBalance(Number(res.wallet.balance))
@@ -140,7 +178,7 @@ export default function useWallet() {
 
     // Pembayaran tagihan (Pulsa/PLN/Air/Internet) = SIMULASI UI saja, belum ada
     // endpoint backend-nya. Sengaja TIDAK mengubah saldo/riwayat agar tidak desync
-    // dengan server (dulu sempat menyuntik baris palsu yang hilang saat reload).
+    // dengan server saat halaman di-reload (baris palsu akan hilang).
     return { id: 'sim-' + now.getTime(), code: 'SIMULASI', simulated: true }
   }, [balance])
 

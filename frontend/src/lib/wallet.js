@@ -1,16 +1,20 @@
-// Shared wallet helpers + validation. Frontend-only simulation, no real API.
-// Data model mirrors PRD §6.4 (ledger per baris): every mutation is its own row
-// with balance_after recorded, so the history is self-explanatory / audit-ready.
+// lib/wallet.js — utilitas bersama untuk format, validasi, filter, dan export.
+// Fungsi-fungsi di sini murni (pure) dan tidak bergantung pada state React,
+// sehingga bisa diuji dan dipakai di mana saja (hooks, komponen, lib lain).
 
+// Batas nominal transaksi per kali (mirror dari config backend wallet.max_transaction_amount)
 export const MAX_TX = 10000000
+// Jumlah baris per halaman di tabel riwayat
 export const PER = 5
 
+// Singkatan bulan dalam Bahasa Indonesia untuk format tanggal
 export const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
   'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
 ]
 
-// Simulated user directory for transfer recipient lookup.
+// Direktori kontak simulasi — dipakai oleh recipientStatus() di TransferModal.
+// Dalam produksi, pencarian penerima dilakukan di backend via email/username/HP.
 export const DIRECTORY = {
   budi: 'Budi S.',
   siti: 'Siti A.',
@@ -19,9 +23,10 @@ export const DIRECTORY = {
   rina: 'Rina W.',
 }
 
+// Username yang dianggap "diri sendiri" — untuk validasi transfer ke diri sendiri
 export const SELF = ['aldi', '@aldi', 'saya', '@saya']
 
-// Logged-in demo user (used for QR / profile).
+// Data user demo statis (dipakai oleh ReceiveQRModal sebagai fallback sebelum API load)
 export const ME = {
   name: 'Aldi P.',
   username: '@aldi',
@@ -29,21 +34,29 @@ export const ME = {
   phone: '0812-3344-4021',
 }
 
-// ---- formatting ----
+// ---- format angka & tanggal ----
+
+/** Pisahkan ribuan dengan titik: 1500000 → "1.500.000" */
 export const group = (n) =>
   Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 
+/** Format Rupiah: 1500000 → "Rp 1.500.000" */
 export const fmtRp = (n) => 'Rp ' + group(n)
 
+/** Format waktu HH:MM dari objek Date */
 export const fmtTime = (d) =>
   String(d.getHours()).padStart(2, '0') +
   ':' +
   String(d.getMinutes()).padStart(2, '0')
 
+/** Format tanggal "21 Jun 2026" dari objek Date */
 export const fmtDate = (d) =>
   d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear()
 
-// Unique, human-readable transaction code (audit-ready, PRD theme).
+/**
+ * Generate kode transaksi unik, format TRX-YYYYMMDD-XXXX.
+ * Dipakai di sisi frontend untuk data lokal/simulasi; backend punya generateCode() sendiri.
+ */
 export function genCode(ts = Date.now()) {
   const d = new Date(ts)
   const ymd =
@@ -54,7 +67,10 @@ export function genCode(ts = Date.now()) {
   return `TRX-${ymd}-${rand}`
 }
 
-// Build a normalized transaction row.
+/**
+ * Buat objek transaksi ternormalisasi (dipakai untuk data seed/simulasi lokal).
+ * Transaksi nyata dari API sudah diformat oleh normalizeTx() di useWallet.js.
+ */
 export function makeTransaction({ type, amount, counterparty, balanceAfter, description = '', ts = Date.now() }) {
   const d = new Date(ts)
   const signed = type === 'KELUAR' ? -Math.abs(amount) : Math.abs(amount)
@@ -72,12 +88,18 @@ export function makeTransaction({ type, amount, counterparty, balanceAfter, desc
   }
 }
 
-// ---- validation (mirrors PRD §9.2 microcopy, verbatim) ----
+// ---- validasi nominal (sisi klien, mirror aturan backend) ----
+
+/**
+ * Validasi input nominal dari user. Mengembalikan { err } jika invalid,
+ * atau { n } (angka integer) jika valid.
+ * Pesan error sengaja identik dengan pesan backend (lihat TopUpRequest.php).
+ */
 export function validateNominal(raw) {
   const v = (raw || '').trim()
   if (v === '') return { err: 'Nominal tidak boleh kosong.' }
   if (/^-/.test(v)) return { err: 'Nominal tidak boleh negatif.' }
-  const noThousand = v.replace(/[.\s]/g, '')
+  const noThousand = v.replace(/[.\s]/g, '') // hapus pemisah ribuan yang mungkin diketik user
   if (/,/.test(noThousand)) return { err: 'Nominal harus berupa bilangan bulat.' }
   if (!/^[0-9]+$/.test(noThousand)) return { err: 'Nominal harus berupa angka.' }
   const n = parseInt(noThousand, 10)
@@ -86,6 +108,10 @@ export function validateNominal(raw) {
   return { n }
 }
 
+/**
+ * Cek status penerima transfer di direktori lokal (simulasi).
+ * Untuk transfer nyata, validasi penerima ada di backend (WalletService.transfer).
+ */
 export function recipientStatus(raw) {
   const v = (raw || '').trim().toLowerCase().replace(/^@/, '')
   if (v === '') return { status: 'empty' }
@@ -95,10 +121,14 @@ export function recipientStatus(raw) {
   return { status: 'notfound' }
 }
 
-// Seed transactions for first run (matches the design's initial state, with ts + codes).
+// ---- data seed (tampilan awal sebelum ada transaksi nyata) ----
+
+/** Helper untuk timestamp seed yang presisi */
 function seedTs(y, mo, d, h, mi) {
   return new Date(y, mo, d, h, mi).getTime()
 }
+
+/** Transaksi contoh yang ditampilkan di Dashboard saat riwayat masih kosong */
 export const SEED_TRANSACTIONS = [
   makeTransaction({ type: 'MASUK', amount: 500000, counterparty: 'dari Budi S.', balanceAfter: 2450000, ts: seedTs(2026, 5, 21, 9, 12), description: 'Transfer masuk' }),
   makeTransaction({ type: 'KELUAR', amount: 150000, counterparty: 'ke Siti A.', balanceAfter: 1950000, ts: seedTs(2026, 5, 20, 14, 30), description: 'bayar makan siang' }),
@@ -110,13 +140,19 @@ export const SEED_TRANSACTIONS = [
 
 export const SEED_BALANCE = 2450000
 
-// Accent + label derivation for a transaction row.
+// ---- row meta (warna & label untuk tiap baris riwayat) ----
+
+/**
+ * Hitung warna aksen, label tipe, dan teks nominal untuk satu baris transaksi.
+ * Dipakai oleh LedgerRow (Dashboard) dan ReceiptModal.
+ */
 export function rowMeta(t) {
   const masuk = t.amount > 0
   const isPending = t.status === 'PENDING'
   const isFailed = t.status === 'FAILED'
 
-  let accent = t.type === 'TOPUP' ? '#C98A2B' : masuk ? '#2F6F4E' : '#7A3142'
+  // Warna rail kiri: emas = topup, hijau = masuk, merah = keluar; abu = pending
+  let accent = t.type === 'TOPUP' ? '#BEF264' : masuk ? '#2F6F4E' : '#7A3142'
   if (isPending) {
     accent = '#7B8890'
   } else if (isFailed) {
@@ -136,11 +172,17 @@ export function rowMeta(t) {
     typeLabel,
     counterparty: t.counterparty || '—',
     amountStr: sign + ' ' + fmtRp(t.amount),
+    // Saldo setelah tidak ditampilkan jika transaksi masih PENDING atau FAILED
     balanceAfterStr: isPending ? '—' : isFailed ? '—' : fmtRp(t.balanceAfter),
   }
 }
 
-// ---- monthly summary (Ringkasan bulanan) ----
+// ---- ringkasan bulanan ----
+
+/**
+ * Hitung total masuk, keluar, dan selisih bersih untuk bulan `ref` (default bulan ini).
+ * Dipakai oleh komponen MonthlySummary.
+ */
 export function monthlySummary(transactions, ref = new Date()) {
   const y = ref.getFullYear()
   const m = ref.getMonth()
@@ -158,8 +200,12 @@ export function monthlySummary(transactions, ref = new Date()) {
   return { masuk, keluar, net: masuk - keluar, count, label: `${MONTHS[m]} ${y}` }
 }
 
-// ---- filter & search (Filter & cari riwayat) ----
-// filters: { type: 'ALL'|'MASUK'|'KELUAR'|'TOPUP', from: 'YYYY-MM-DD'|'', to: '...', q: '' }
+// ---- filter & pencarian riwayat ----
+
+/**
+ * Filter daftar transaksi berdasarkan tipe, rentang tanggal, dan kata kunci.
+ * `filters` = { type: 'ALL'|'MASUK'|'KELUAR'|'TOPUP', from: 'YYYY-MM-DD', to: '...', q: '' }
+ */
 export function filterTransactions(transactions, filters) {
   const { type = 'ALL', from = '', to = '', q = '' } = filters || {}
   const fromTs = from ? new Date(from + 'T00:00:00').getTime() : null
@@ -170,6 +216,7 @@ export function filterTransactions(transactions, filters) {
     if (fromTs !== null && t.ts < fromTs) return false
     if (toTs !== null && t.ts > toTs) return false
     if (needle) {
+      // Cari di counterparty + catatan + kode transaksi
       const hay = (t.counterparty + ' ' + (t.description || '') + ' ' + t.code).toLowerCase()
       if (!hay.includes(needle)) return false
     }
@@ -177,7 +224,9 @@ export function filterTransactions(transactions, filters) {
   })
 }
 
-// ---- CSV export (Export riwayat) ----
+// ---- export CSV ----
+
+/** Ubah array transaksi menjadi string CSV (UTF-8 dengan BOM agar Excel terbaca). */
 export function toCSV(transactions) {
   const header = ['Kode', 'Tanggal', 'Waktu', 'Tipe', 'Lawan Transaksi', 'Nominal', 'Saldo Setelah', 'Catatan']
   const rows = transactions.map((t) => [
@@ -188,7 +237,7 @@ export function toCSV(transactions) {
     t.counterparty,
     t.amount,
     t.balanceAfter,
-    (t.description || '').replace(/"/g, '""'),
+    (t.description || '').replace(/"/g, '""'), // escape kutip ganda dalam CSV
   ])
   const esc = (v) => {
     const s = String(v)
@@ -197,7 +246,9 @@ export function toCSV(transactions) {
   return [header, ...rows].map((r) => r.map(esc).join(',')).join('\n')
 }
 
+/** Trigger download file CSV ke browser user. */
 export function downloadCSV(transactions, filename = 'mutasi-trustpay.csv') {
+  // BOM (﻿) di awal memastikan Excel Windows membaca UTF-8 dengan benar
   const blob = new Blob(['﻿' + toCSV(transactions)], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

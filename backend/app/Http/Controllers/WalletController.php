@@ -9,10 +9,21 @@ use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * WalletController — endpoint saldo, top up, transfer, dan riwayat transaksi.
+ *
+ * Semua route di sini dilindungi `auth:sanctum` (lihat routes/api.php).
+ * WalletService di-inject lewat constructor supaya controller hanya
+ * mengurus HTTP in/out; logika bisnis ada di service.
+ */
 class WalletController extends Controller
 {
     public function __construct(private WalletService $walletService) {}
 
+    /**
+     * GET /wallet — kembalikan saldo user yang sedang login.
+     * Frontend memanggilnya saat halaman Dashboard dimuat.
+     */
     public function show(Request $request): JsonResponse
     {
         $wallet = $request->user()->wallet;
@@ -20,6 +31,11 @@ class WalletController extends Controller
         return response()->json(['balance' => (float) $wallet->balance]);
     }
 
+    /**
+     * POST /topup — inisialisasi top up via Midtrans Snap.
+     * TopUpRequest memvalidasi `amount` (angka bulat, > 0, ≤ maks konfigurasi).
+     * Respons: snap_token + redirect_url untuk membuka Midtrans Snap UI di frontend.
+     */
     public function topup(TopUpRequest $request): JsonResponse
     {
         $result = $this->walletService->topUp($request->user(), (int) $request->amount);
@@ -32,8 +48,14 @@ class WalletController extends Controller
         ]);
     }
 
+    /**
+     * POST /topup/confirm — dipanggil frontend setelah user selesai di Snap popup
+     * (sukses, pending, gagal, atau tutup popup).
+     * Mengambil status terbaru dari Midtrans API, lalu update saldo jika SUCCESS.
+     */
     public function confirmTopUp(Request $request): JsonResponse
     {
+        // Validasi inline: `code` harus ada di tabel transactions.
         $request->validate([
             'code' => 'required|string|exists:transactions,code',
         ]);
@@ -52,6 +74,11 @@ class WalletController extends Controller
         }
     }
 
+    /**
+     * POST /transfer — kirim uang ke user lain.
+     * TransferRequest memvalidasi recipient + amount.
+     * WalletService menangani pencarian penerima, cek saldo, debit-credit atomik.
+     */
     public function transfer(TransferRequest $request): JsonResponse
     {
         try {
@@ -64,16 +91,21 @@ class WalletController extends Controller
 
             return response()->json([
                 'message'     => 'Transfer berhasil.',
-                'wallet'      => ['balance' => (float) $result['wallet']->balance],
+                'wallet'      => ['balance' => (float) $result['wallet']->balance], // saldo pengirim setelah transfer
                 'transaction' => $this->formatTx($result['transaction']),
             ]);
         } catch (\DomainException $e) {
+            // DomainException dilempar WalletService untuk error bisnis (saldo kurang, penerima tidak ada)
             $status = $e->getCode() ?: 400;
 
             return response()->json(['message' => $e->getMessage()], $status);
         }
     }
 
+    /**
+     * GET /transactions — riwayat semua transaksi user, terbaru dulu.
+     * counterpartUser di-eager-load supaya tidak N+1 query.
+     */
     public function transactions(Request $request): JsonResponse
     {
         $txs = $request->user()
@@ -87,19 +119,24 @@ class WalletController extends Controller
         ]);
     }
 
+    /**
+     * Format satu baris Transaction menjadi array yang aman dikirim ke frontend.
+     * Tipe data dijaga eksplisit (float, string, null) supaya JSON konsisten.
+     */
     private function formatTx(Transaction $tx): array
     {
+        // counterpartUser hanya tersedia jika sudah di-load (eager atau manual)
         $cu = $tx->relationLoaded('counterpartUser') ? $tx->counterpartUser : null;
 
         return [
             'id'               => $tx->id,
             'code'             => $tx->code,
-            'type'             => $tx->type,
-            'status'           => $tx->status,
+            'type'             => $tx->type,                    // TOPUP | TRANSFER_IN | TRANSFER_OUT
+            'status'           => $tx->status,                  // PENDING | SUCCESS | FAILED
             'amount'           => (float) $tx->amount,
             'balance_after'    => $tx->balance_after !== null ? (float) $tx->balance_after : null,
             'description'      => $tx->description,
-            'transfer_code'    => $tx->transfer_code,
+            'transfer_code'    => $tx->transfer_code,           // UUID bersama dengan pasangan transfer
             'counterpart_user' => $cu ? ['id' => $cu->id, 'name' => $cu->name, 'username' => $cu->username] : null,
             'created_at'       => $tx->created_at,
         ];

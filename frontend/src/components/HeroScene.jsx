@@ -42,7 +42,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
           width: 380,
           height: 240,
           transform: 'translate(-50%,-50%)',
-          background: 'radial-gradient(closest-side, rgba(17,32,61,0.18), transparent)',
+          background: 'radial-gradient(closest-side, rgba(23,25,29,0.18), transparent)',
           filter: 'blur(18px)',
           borderRadius: '50%',
         }}
@@ -78,7 +78,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
               height: 380,
               transform: 'translateZ(-50px) rotate(-3deg)',
               borderRadius: 16,
-              boxShadow: '0 40px 70px -30px rgba(17,32,61,0.45)',
+              boxShadow: '0 40px 70px -30px rgba(23,25,29,0.45)',
               overflow: 'hidden',
               background: '#fbfcf9',
               backgroundImage:
@@ -92,7 +92,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
                 bottom: 18,
                 width: 96,
                 height: 96,
-                border: '2px solid rgba(201,138,43,0.28)',
+                border: '2px solid rgba(190,242,100,0.28)',
                 borderRadius: '50%',
                 transform: 'rotate(-8deg)',
                 display: 'flex',
@@ -105,7 +105,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
                   fontFamily: "'IBM Plex Mono',monospace",
                   fontSize: 11,
                   letterSpacing: '0.14em',
-                  color: 'rgba(201,138,43,0.4)',
+                  color: 'rgba(190,242,100,0.4)',
                   textTransform: 'uppercase',
                 }}
               >
@@ -114,7 +114,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
             </div>
             <Dot top={14} color="#2F6F4E" />
             <Dot top={120} color="#7A3142" />
-            <Dot top={226} color="#C98A2B" />
+            <Dot top={226} color="#BEF264" />
           </div>
 
           {/* LAYER: Card Saldo (digital wallet card) */}
@@ -130,18 +130,18 @@ export default function HeroScene({ tiltStrength = 1 }) {
               padding: '22px 24px',
               color: '#EFF1EC',
               overflow: 'hidden',
-              background: 'linear-gradient(155deg,#1f3560 0%,#11203D 58%,#0d1830 100%)',
-              boxShadow: '0 26px 50px -18px rgba(17,32,61,0.6)',
+              background: 'linear-gradient(155deg,#2A2D33 0%,#17191D 58%,#0E1014 100%)',
+              boxShadow: '0 26px 50px -18px rgba(23,25,29,0.6)',
             }}
           >
             <div ref={glareRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 20, background: 'transparent' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(160px 80px at 82% 6%, rgba(201,138,43,0.16), transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', right: -22, bottom: -26, width: 120, height: 120, border: '2px solid rgba(201,138,43,0.18)', borderRadius: '50%', transform: 'rotate(-8deg)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(160px 80px at 82% 6%, rgba(190,242,100,0.16), transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', right: -22, bottom: -26, width: 120, height: 120, border: '2px solid rgba(190,242,100,0.18)', borderRadius: '50%', transform: 'rotate(-8deg)' }} />
 
             {/* top row: wordmark + contactless */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#C98A2B' }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#BEF264' }} />
                 <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.01em' }}>TrustPay</span>
               </div>
               <Contactless />
@@ -161,7 +161,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
 
             {/* buttons */}
             <div style={{ display: 'flex', gap: 10, marginTop: 18, position: 'relative' }}>
-              <div style={{ flex: 1, textAlign: 'center', padding: '11px 0', borderRadius: 10, background: '#C98A2B', color: '#1a1205', fontSize: 14, fontWeight: 700 }}>+ Top Up</div>
+              <div style={{ flex: 1, textAlign: 'center', padding: '11px 0', borderRadius: 10, background: '#BEF264', color: '#16210A', fontSize: 14, fontWeight: 700 }}>+ Top Up</div>
               <div style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1.5px solid rgba(239,241,236,0.4)', color: '#EFF1EC', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}><TransferIcon size={16} /> Transfer</div>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
               style={{
                 width: '100%',
                 height: '100%',
-                border: '2.5px solid #C98A2B',
+                border: '2.5px solid #4D7C0F',
                 borderRadius: '50%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -200,11 +200,11 @@ export default function HeroScene({ tiltStrength = 1 }) {
                 justifyContent: 'center',
                 background: 'rgba(239,241,236,0.86)',
                 backdropFilter: 'blur(2px)',
-                boxShadow: '0 18px 30px -12px rgba(201,138,43,0.55)',
+                boxShadow: '0 18px 30px -12px rgba(190,242,100,0.55)',
               }}
             >
-              <span style={{ color: '#C98A2B', display: 'flex' }}><CheckIcon size={24} strokeWidth={2.6} /></span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.16em', color: '#C98A2B', textTransform: 'uppercase', marginTop: 4 }}>Berhasil</span>
+              <span style={{ color: '#4D7C0F', display: 'flex' }}><CheckIcon size={24} strokeWidth={2.6} /></span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.16em', color: '#4D7C0F', textTransform: 'uppercase', marginTop: 4 }}>Berhasil</span>
             </div>
           </div>
         </div>
@@ -229,8 +229,8 @@ function Contactless() {
 
 function Chip() {
   return (
-    <div style={{ width: 38, height: 28, borderRadius: 6, background: 'linear-gradient(150deg,#EAD08A,#C98A2B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-      <div style={{ width: 22, height: 15, border: '1px solid rgba(17,32,61,0.35)', borderRadius: 3 }} />
+    <div style={{ width: 38, height: 28, borderRadius: 6, background: 'linear-gradient(150deg,#E9FBA8,#BEF264)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+      <div style={{ width: 22, height: 15, border: '1px solid rgba(23,25,29,0.35)', borderRadius: 3 }} />
     </div>
   )
 }
@@ -243,7 +243,7 @@ function FloatChip({ style, accent, label, who, date, amount }) {
         background: '#fff',
         borderRadius: 13,
         padding: '13px 15px',
-        boxShadow: '0 22px 40px -16px rgba(17,32,61,0.4)',
+        boxShadow: '0 22px 40px -16px rgba(23,25,29,0.4)',
         display: 'flex',
         gap: 11,
         alignItems: 'center',
@@ -254,7 +254,7 @@ function FloatChip({ style, accent, label, who, date, amount }) {
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: accent, border: `1px solid ${accent}66`, borderRadius: 999, padding: '2px 8px' }}>{label}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#11203D' }}>{who}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#17191D' }}>{who}</span>
         </div>
         <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#5C6B73', letterSpacing: '0.04em' }}>{date}</div>
       </div>

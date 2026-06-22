@@ -4,9 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#11203D',
+        ink: '#17191D',        // carbon
+        carbon: '#17191D',
+        carbon2: '#2C2F35',
+        carbon3: '#0C0E11',
         paper: '#EFF1EC',
-        stamp: '#C98A2B',
+        lime: '#BEF264',       // bright lime accent
+        limeink: '#4D7C0F',    // deep lime (accent text on light)
+        stamp: '#4D7C0F',      // legacy alias
         masuk: '#2F6F4E',
         keluar: '#7A3142',
         tepi: '#5C6B73',

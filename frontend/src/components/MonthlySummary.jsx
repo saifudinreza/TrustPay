@@ -1,7 +1,16 @@
 import { fmtRp } from '../lib/wallet.js'
 import { ArrowDownLeftIcon, ArrowUpRightIcon, ScaleIcon } from './icons.jsx'
 
-// Ringkasan bulanan — total masuk vs keluar bulan ini, di atas tabel riwayat.
+/**
+ * MonthlySummary — tiga kartu statistik di atas tabel riwayat.
+ *
+ * Menampilkan:
+ *  1. Total masuk bulan ini (hijau)
+ *  2. Total keluar bulan ini (merah) + jumlah transaksi
+ *  3. Selisih bersih (emas jika positif, merah jika negatif)
+ *
+ * Data dihitung oleh monthlySummary() di lib/wallet.js dan di-pass sebagai prop `summary`.
+ */
 export default function MonthlySummary({ summary }) {
   const net = summary.net
   return (
@@ -11,7 +20,7 @@ export default function MonthlySummary({ summary }) {
         value={`+ ${fmtRp(summary.masuk)}`}
         accent="#2F6F4E"
         Icon={ArrowDownLeftIcon}
-        sub={summary.label}
+        sub={summary.label} // mis. "Jun 2026"
       />
       <StatCard
         label="Keluar bulan ini"
@@ -23,7 +32,7 @@ export default function MonthlySummary({ summary }) {
       <StatCard
         label="Selisih bersih"
         value={`${net < 0 ? '− ' : '+ '}${fmtRp(net)}`}
-        accent={net < 0 ? '#7A3142' : '#C98A2B'}
+        accent={net < 0 ? '#7A3142' : '#4D7C0F'} // merah jika defisit, emas jika surplus
         Icon={ScaleIcon}
         sub={net < 0 ? 'lebih banyak keluar' : 'lebih banyak masuk'}
       />
@@ -31,9 +40,11 @@ export default function MonthlySummary({ summary }) {
   )
 }
 
+/** Satu kartu statistik dengan rail warna kiri + ikon bulat */
 function StatCard({ label, value, accent, Icon, sub }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid rgba(17,32,61,0.06)', boxShadow: '0 14px 30px -26px rgba(17,32,61,0.4)', padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid rgba(23,25,29,0.06)', boxShadow: '0 14px 30px -26px rgba(23,25,29,0.4)', padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
+      {/* Rail vertikal kiri — sama dengan ledger row untuk konsistensi visual */}
       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: accent }} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#5C6B73' }}>{label}</span>

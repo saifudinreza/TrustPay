@@ -45,15 +45,15 @@ export default function Register() {
     }
   }
 
-  const fieldErr = (cond) => (touched && cond ? '#7A3142' : 'rgba(17,32,61,0.18)')
+  const fieldErr = (cond) => (touched && cond ? '#7A3142' : 'rgba(23,25,29,0.18)')
 
   return (
     <AuthShell tagline={'Buka buku tabungan\ndigitalmu — gratis\n& tercatat rapi.'}>
       <form onSubmit={onSubmit} className="auth-form-enter" style={{ width: '100%', maxWidth: 400 }}>
-        <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: '#11203D' }}>
+        <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: '#17191D' }}>
           Daftar Akun
         </h1>
-        <div style={{ height: 3, width: 44, background: '#C98A2B', borderRadius: 2, marginBottom: 20 }} />
+        <div style={{ height: 3, width: 44, background: '#BEF264', borderRadius: 2, marginBottom: 20 }} />
 
         {error && (
           <div role="alert" style={alertStyle}>{error}</div>
@@ -118,7 +118,7 @@ export default function Register() {
 
         <p style={{ marginTop: 18, fontSize: 14, color: '#5C6B73', textAlign: 'center' }}>
           Sudah punya akun?{' '}
-          <Link to="/masuk" style={{ color: '#C98A2B', fontWeight: 600, textDecoration: 'none' }}>Masuk</Link>
+          <Link to="/masuk" style={{ color: '#4D7C0F', fontWeight: 600, textDecoration: 'none' }}>Masuk</Link>
         </p>
       </form>
     </AuthShell>
@@ -146,13 +146,13 @@ function Hint({ children }) {
   return <div style={{ marginTop: 6, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#7A3142' }}>{children}</div>
 }
 
-const fieldLabel = { display: 'block', fontSize: 14, fontWeight: 600, color: '#11203D', marginBottom: 8 }
+const fieldLabel = { display: 'block', fontSize: 14, fontWeight: 600, color: '#17191D', marginBottom: 8 }
 const alertStyle = { marginBottom: 18, padding: '12px 14px', borderRadius: 10, background: 'rgba(122,49,66,0.08)', border: '1px solid rgba(122,49,66,0.25)', color: '#7A3142', fontSize: 14, fontWeight: 500 }
 const eyeBtn = { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', height: 38, width: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#5C6B73', borderRadius: 8 }
 function input(borderColor) {
   return {
     width: '100%', height: 50, padding: '0 14px 0 44px', borderRadius: 10,
     border: `1.5px solid ${borderColor}`, background: '#fbfcf9', outline: 'none',
-    fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, color: '#11203D',
+    fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, color: '#17191D',
   }
 }
