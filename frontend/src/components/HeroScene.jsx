@@ -1,39 +1,18 @@
-import { useRef } from 'react'
 import { CheckIcon, TransferIcon } from './icons.jsx'
 
-// The interactive 3D card stack from the landing hero. Pointer tilt + glare,
-// idle float, ported from the design's DC logic into a React component.
-export default function HeroScene({ tiltStrength = 1 }) {
-  const stageRef = useRef(null)
-  const glareRef = useRef(null)
-
-  const handleMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect()
-    const px = (e.clientX - r.left) / r.width
-    const py = (e.clientY - r.top) / r.height
-    const rx = (0.5 - py) * 18 * tiltStrength
-    const ry = (px - 0.5) * 22 * tiltStrength
-    if (stageRef.current) {
-      stageRef.current.style.transform = `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`
-    }
-    if (glareRef.current) {
-      glareRef.current.style.background = `radial-gradient(360px circle at ${(px * 100).toFixed(1)}% ${(py * 100).toFixed(1)}%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%)`
-    }
-  }
-
-  const handleLeave = () => {
-    if (stageRef.current) stageRef.current.style.transform = 'rotateX(0deg) rotateY(0deg)'
-    if (glareRef.current) glareRef.current.style.background = 'transparent'
-  }
-
+/**
+ * HeroScene — 3D card stack animasi murni CSS (tidak mengikuti kursor).
+ * autoTilt: rotasi X/Y otomatis via @keyframes (lihat index.css).
+ * floatY: naik-turun halus berulang.
+ * chipFloat1/2: chip notifikasi melayang independen.
+ */
+export default function HeroScene() {
   return (
     <div
       data-scene-box
       style={{ position: 'relative', width: 480, height: 540, flex: 'none' }}
-      onMouseMove={handleMove}
-      onMouseLeave={handleLeave}
     >
-      {/* ambient glow under the stack */}
+      {/* ambient shadow bawah stack */}
       <div
         style={{
           position: 'absolute',
@@ -48,6 +27,7 @@ export default function HeroScene({ tiltStrength = 1 }) {
         }}
       />
 
+      {/* wrapper floatY naik-turun */}
       <div
         data-floatwrap
         style={{
@@ -57,18 +37,18 @@ export default function HeroScene({ tiltStrength = 1 }) {
           transformStyle: 'preserve-3d',
         }}
       >
+        {/* stage — auto-tilt CSS (gantikan pointer tracking) */}
         <div
-          ref={stageRef}
           style={{
             position: 'relative',
             width: '100%',
             height: '100%',
             transformStyle: 'preserve-3d',
-            transition: 'transform 160ms cubic-bezier(.2,.7,.3,1)',
+            animation: 'autoTilt 10s ease-in-out infinite',
             willChange: 'transform',
           }}
         >
-          {/* LAYER: ledger page behind */}
+          {/* LAYER: halaman buku tabungan di belakang */}
           <div
             style={{
               position: 'absolute',
@@ -115,9 +95,11 @@ export default function HeroScene({ tiltStrength = 1 }) {
             <Dot top={14} color="#2F6F4E" />
             <Dot top={120} color="#7A3142" />
             <Dot top={226} color="#BEF264" />
+            {/* garis-garis ledger mini */}
+            <LedgerLines />
           </div>
 
-          {/* LAYER: Card Saldo (digital wallet card) */}
+          {/* LAYER: Kartu Saldo digital */}
           <div
             style={{
               position: 'absolute',
@@ -134,11 +116,30 @@ export default function HeroScene({ tiltStrength = 1 }) {
               boxShadow: '0 26px 50px -18px rgba(23,25,29,0.6)',
             }}
           >
-            <div ref={glareRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 20, background: 'transparent' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(160px 80px at 82% 6%, rgba(190,242,100,0.16), transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', right: -22, bottom: -26, width: 120, height: 120, border: '2px solid rgba(190,242,100,0.18)', borderRadius: '50%', transform: 'rotate(-8deg)' }} />
+            {/* highlight sudut kiri-atas */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(160px 80px at 82% 6%, rgba(190,242,100,0.16), transparent 70%)',
+                pointerEvents: 'none',
+              }}
+            />
+            {/* lingkaran dekoratif */}
+            <div
+              style={{
+                position: 'absolute',
+                right: -22,
+                bottom: -26,
+                width: 120,
+                height: 120,
+                border: '2px solid rgba(190,242,100,0.18)',
+                borderRadius: '50%',
+                transform: 'rotate(-8deg)',
+              }}
+            />
 
-            {/* top row: wordmark + contactless */}
+            {/* baris atas: wordmark + contactless */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#BEF264' }} />
@@ -147,44 +148,74 @@ export default function HeroScene({ tiltStrength = 1 }) {
               <Contactless />
             </div>
 
-            {/* chip + card number */}
+            {/* chip + nomor kartu */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 16, position: 'relative' }}>
               <Chip />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 15, letterSpacing: '0.1em', color: 'rgba(239,241,236,0.85)', fontFeatureSettings: "'tnum'" }}>•••• •••• •••• 4021</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 15, letterSpacing: '0.1em', color: 'rgba(239,241,236,0.85)', fontFeatureSettings: "'tnum'" }}>
+                •••• •••• •••• 4021
+              </span>
             </div>
 
             {/* saldo */}
             <div style={{ marginTop: 16, position: 'relative' }}>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.55)', marginBottom: 4 }}>Saldo Anda</div>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, fontSize: 32, letterSpacing: '-0.01em', fontFeatureSettings: "'tnum'" }}>Rp 2.450.000</div>
+              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.55)', marginBottom: 4 }}>
+                Saldo Anda
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, fontSize: 32, letterSpacing: '-0.01em', fontFeatureSettings: "'tnum'" }}>
+                Rp 2.450.000
+              </div>
             </div>
 
-            {/* buttons */}
+            {/* tombol aksi (dekoratif) */}
             <div style={{ display: 'flex', gap: 10, marginTop: 18, position: 'relative' }}>
-              <div style={{ flex: 1, textAlign: 'center', padding: '11px 0', borderRadius: 10, background: '#BEF264', color: '#16210A', fontSize: 14, fontWeight: 700 }}>+ Top Up</div>
-              <div style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1.5px solid rgba(239,241,236,0.4)', color: '#EFF1EC', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}><TransferIcon size={16} /> Transfer</div>
+              <div style={{ flex: 1, textAlign: 'center', padding: '11px 0', borderRadius: 10, background: '#BEF264', color: '#16210A', fontSize: 14, fontWeight: 700 }}>
+                + Top Up
+              </div>
+              <div style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1.5px solid rgba(239,241,236,0.4)', color: '#EFF1EC', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                <TransferIcon size={16} /> Transfer
+              </div>
             </div>
           </div>
 
-          {/* floating chip — masuk */}
-          <FloatChip
-            style={{ right: -6, top: 64, width: 236, transform: 'translateZ(88px)' }}
-            accent="#2F6F4E"
-            label="Masuk"
-            who="dari Budi S."
-            date="21 JUN · 09:12"
-            amount="+500K"
-          />
+          {/* chip melayang — Masuk (kanan atas) */}
+          <div style={{ position: 'absolute', right: -6, top: 64, width: 236, animation: 'chipFloat1 5s ease-in-out infinite' }}>
+            <FloatChip
+              accent="#2F6F4E"
+              label="Masuk"
+              who="dari Budi S."
+              date="21 JUN · 09:12"
+              amount="+500K"
+            />
+          </div>
 
-          {/* floating chip — keluar */}
-          <FloatChip
-            style={{ left: -22, bottom: 42, width: 240, transform: 'translateZ(104px)' }}
-            accent="#7A3142"
-            label="Keluar"
-            who="ke Siti A."
-            date="20 JUN · 14:30"
-            amount="−150K"
-          />
+          {/* chip melayang — Keluar (kiri bawah) */}
+          <div style={{ position: 'absolute', left: -22, bottom: 42, width: 240, animation: 'chipFloat2 6.5s ease-in-out infinite' }}>
+            <FloatChip
+              accent="#7A3142"
+              label="Keluar"
+              who="ke Siti A."
+              date="20 JUN · 14:30"
+              amount="−150K"
+            />
+          </div>
+
+          {/* chip melayang — QRIS (kanan tengah, tambahan) */}
+          <div style={{
+            position: 'absolute', right: -30, top: 240, width: 180,
+            background: '#fff', borderRadius: 13, padding: '10px 13px',
+            boxShadow: '0 18px 36px -14px rgba(23,25,29,0.35)',
+            display: 'flex', gap: 10, alignItems: 'center',
+            transform: 'translateZ(60px)',
+            animation: 'chipFloat1 8s ease-in-out infinite 1.5s',
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#17191D', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: '#BEF264', letterSpacing: '0.04em' }}>QR</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#17191D' }}>Bayar QRIS</div>
+              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: '#2F6F4E' }}>Rp 35.000</div>
+            </div>
+          </div>
 
           {/* stempel BERHASIL */}
           <div style={{ position: 'absolute', right: 18, bottom: 74, width: 104, height: 104, transform: 'translateZ(150px)', animation: 'stampPulse 3.6s ease-in-out infinite' }}>
@@ -217,6 +248,16 @@ function Dot({ top, color }) {
   return <div style={{ position: 'absolute', left: 20, top, width: 8, height: 8, borderRadius: '50%', background: color }} />
 }
 
+function LedgerLines() {
+  return (
+    <div style={{ position: 'absolute', left: 36, top: 40, right: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {[100, 75, 55, 90, 65].map((w, i) => (
+        <div key={i} style={{ height: 7, width: `${w}%`, borderRadius: 4, background: 'rgba(23,25,29,0.07)' }} />
+      ))}
+    </div>
+  )
+}
+
 function Contactless() {
   return (
     <div style={{ width: 16, height: 22, overflow: 'hidden', position: 'relative', opacity: 0.55 }}>
@@ -235,11 +276,10 @@ function Chip() {
   )
 }
 
-function FloatChip({ style, accent, label, who, date, amount }) {
+function FloatChip({ accent, label, who, date, amount }) {
   return (
     <div
       style={{
-        position: 'absolute',
         background: '#fff',
         borderRadius: 13,
         padding: '13px 15px',
@@ -247,7 +287,6 @@ function FloatChip({ style, accent, label, who, date, amount }) {
         display: 'flex',
         gap: 11,
         alignItems: 'center',
-        ...style,
       }}
     >
       <div style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, background: accent }} />

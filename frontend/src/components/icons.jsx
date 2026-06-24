@@ -224,3 +224,76 @@ export const LockIcon = (p) => (
     <circle cx="12" cy="15.2" r="1.1" fill="currentColor" stroke="none" />
   </Icon>
 )
+
+// ---- notifications ----
+export const BellIcon = (p) => (
+  <Icon {...p}>
+    <path d="M18 8a6 6 0 0 0-12 0c0 4.5-2 6-2 6h16s-2-1.5-2-6" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </Icon>
+)
+
+// ---- scan / camera ----
+export const ScanIcon = (p) => (
+  <Icon {...p}>
+    <path d="M3 7V4.5A1.5 1.5 0 0 1 4.5 3H7" />
+    <path d="M17 3h2.5A1.5 1.5 0 0 1 21 4.5V7" />
+    <path d="M21 17v2.5a1.5 1.5 0 0 1-1.5 1.5H17" />
+    <path d="M7 21H4.5A1.5 1.5 0 0 1 3 19.5V17" />
+    <line x1="7" y1="12" x2="17" y2="12" />
+  </Icon>
+)
+
+export const CameraIcon = (p) => (
+  <Icon {...p}>
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </Icon>
+)
+
+// ---- promo / rewards ----
+export const GiftIcon = (p) => (
+  <Icon {...p}>
+    <polyline points="20 12 20 22 4 22 4 12" />
+    <rect x="2" y="7" width="20" height="5" rx="1.2" />
+    <line x1="12" y1="22" x2="12" y2="7" />
+    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C10 2 12 7 12 7z" />
+    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C14 2 12 7 12 7z" />
+  </Icon>
+)
+
+export const TagIcon = (p) => (
+  <Icon {...p}>
+    <path d="M20.59 13.41L13.42 20.59a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" />
+    <line x1="7" y1="7" x2="7.01" y2="7" strokeWidth={2.5} />
+  </Icon>
+)
+
+export const StarIcon = (p) => (
+  <Icon {...p}>
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </Icon>
+)
+
+export const SparkleIcon = (p) => (
+  <Icon {...p}>
+    <path d="M12 3 L13.5 8.5 L19 10 L13.5 11.5 L12 17 L10.5 11.5 L5 10 L10.5 8.5 Z" />
+    <path d="M19 2 L19.8 4.2 L22 5 L19.8 5.8 L19 8 L18.2 5.8 L16 5 L18.2 4.2 Z" />
+    <path d="M5 17 L5.5 18.5 L7 19 L5.5 19.5 L5 21 L4.5 19.5 L3 19 L4.5 18.5 Z" />
+  </Icon>
+)
+
+// ---- profile / identity ----
+export const ShieldIcon = (p) => (
+  <Icon {...p}>
+    <path d="M12 2.8 19 5.4v6.1c0 4.3-3 7.3-7 9.7-4-2.4-7-5.4-7-9.7V5.4l7-2.6Z" />
+  </Icon>
+)
+
+export const IdCardIcon = (p) => (
+  <Icon {...p}>
+    <rect x="2" y="5" width="20" height="14" rx="2.4" />
+    <circle cx="8" cy="12" r="2.5" />
+    <path d="M13 10h5M13 14h4" />
+  </Icon>
+)

@@ -10,6 +10,7 @@ const Landing   = lazy(() => import('./pages/Landing.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Login     = lazy(() => import('./pages/Login.jsx'))
 const Register  = lazy(() => import('./pages/Register.jsx'))
+const Profile   = lazy(() => import('./pages/Profile.jsx'))
 
 /** Spinner saat Suspense menunggu chunk halaman diunduh */
 const PageLoader = () => (
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
   {
     path: '/dashboard',
     element: <Suspense fallback={<PageLoader />}><Protected><Dashboard /></Protected></Suspense>,
+  },
+  {
+    path: '/profil',
+    element: <Suspense fallback={<PageLoader />}><Protected><Profile /></Protected></Suspense>,
   },
 ])
 

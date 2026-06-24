@@ -6,36 +6,35 @@ import TransferModal from '../components/TransferModal.jsx'
 import PayModal from '../components/PayModal.jsx'
 import ReceiptModal from '../components/ReceiptModal.jsx'
 import ReceiveQRModal from '../components/ReceiveQRModal.jsx'
+import ScanQRModal from '../components/ScanQRModal.jsx'
+import NotificationPanel from '../components/NotificationPanel.jsx'
 import QuickActions from '../components/QuickActions.jsx'
 import MonthlySummary from '../components/MonthlySummary.jsx'
 import HistoryFilter from '../components/HistoryFilter.jsx'
 import useWallet from '../hooks/useWallet.js'
 import useAuth from '../hooks/useAuth.js'
 import {
-  PlusIcon,
-  TransferIcon,
-  CheckIcon,
-  DownloadIcon,
-  PrinterIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  EyeIcon,
-  EyeOffIcon,
-  LogoutIcon,
+  PlusIcon, TransferIcon, CheckIcon,
+  DownloadIcon, PrinterIcon,
+  ChevronLeftIcon, ChevronRightIcon,
+  EyeIcon, EyeOffIcon, LogoutIcon,
+  BellIcon, ScanIcon, GiftIcon, TagIcon,
+  AlertIcon,
 } from '../components/icons.jsx'
 import {
-  PER,
-  MONTHS,
-  fmtRp,
-  rowMeta,
-  monthlySummary,
-  filterTransactions,
-  downloadCSV,
+  PER, MONTHS, fmtRp, rowMeta,
+  monthlySummary, filterTransactions, downloadCSV,
 } from '../lib/wallet.js'
 
 const EMPTY_FILTERS = { type: 'ALL', from: '', to: '', q: '' }
 
-// Print a target region by toggling a body class consumed by the print stylesheet.
+const NOTIF_STORE = 'trustpay.notif.lastSeen'
+
+const PROMOS = [
+  { id: 1, icon: <GiftIcon size={20} />, title: 'Cashback 10%', desc: 'Transfer sesama TrustPay', tag: 'Sampai 30 Jun', color: '#BEF264', colorInk: '#4D7C0F' },
+  { id: 2, icon: <TagIcon size={20} />, title: 'Top Up Gratis', desc: 'Via VA BCA / BNI / BRI', tag: 'Min Rp 100.000', color: '#17191D', colorInk: '#EFF1EC' },
+]
+
 function printRegion(cls) {
   document.body.classList.add(cls)
   const cleanup = () => {
@@ -46,40 +45,45 @@ function printRegion(cls) {
   window.print()
 }
 
-// Dashboard — wallet card, quick actions, monthly summary, filterable/searchable
-// ledger history, receipt detail, QR receive, CSV/PDF export. State persists to
-// localStorage via useWallet (saldo & riwayat survive reload).
 export default function Dashboard() {
   const { hydrated, balance, transactions, lastUpdate, applyTransaction } = useWallet()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [modal, setModal] = useState(null) // 'topup' | 'transfer' | 'qr' | null
-  const [payService, setPayService] = useState(null)
-  const [receipt, setReceipt] = useState(null)
-  const [showStamp, setShowStamp] = useState(false)
+  const [loading, setLoading]         = useState(true)
+  const [page, setPage]               = useState(0)
+  const [modal, setModal]             = useState(null)  // 'topup'|'transfer'|'qr'|'scan'|null
+  const [payService, setPayService]   = useState(null)
+  const [receipt, setReceipt]         = useState(null)
+  const [showStamp, setShowStamp]     = useState(false)
   const [showBalance, setShowBalance] = useState(true)
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [apiError, setApiError] = useState(null)
+  const [filters, setFilters]         = useState(EMPTY_FILTERS)
+  const [apiError, setApiError]       = useState(null)
+  const [notifOpen, setNotifOpen]     = useState(false)
+  const [lastSeen, setLastSeen]       = useState(() => parseInt(localStorage.getItem(NOTIF_STORE) || '0', 10))
   const stampTimer = useRef(null)
 
   const displayName = user?.name || 'Pengguna'
-  const initial = displayName.trim().charAt(0).toUpperCase() || 'U'
+  const initial     = displayName.trim().charAt(0).toUpperCase() || 'U'
 
-  const onLogout = () => {
-    logout()
-    navigate('/')
+  // Hitung berapa transaksi yang belum dilihat
+  const unreadCount = useMemo(
+    () => transactions.filter(t => t.ts > lastSeen).length,
+    [transactions, lastSeen],
+  )
+
+  const openNotif = () => {
+    const now = Date.now()
+    setLastSeen(now)
+    localStorage.setItem(NOTIF_STORE, String(now))
+    setNotifOpen(true)
   }
 
-  // initial fetch → skeleton (waits for hydration too)
+  const onLogout = () => { logout(); navigate('/') }
+
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 1000)
-    return () => {
-      clearTimeout(t)
-      clearTimeout(stampTimer.current)
-    }
+    return () => { clearTimeout(t); clearTimeout(stampTimer.current) }
   }, [])
 
   const fireStamp = () => {
@@ -105,19 +109,32 @@ export default function Dashboard() {
       setModal(null)
     }
   }
+
   const onTransferConfirm = async (n, _displayName, note, recipientInput) => {
     setApiError(null)
     try {
       await applyTransaction({ type: 'KELUAR', amount: n, recipient: recipientInput, description: note || 'Transfer' })
       afterMutation()
     } catch (e) {
-      setApiError(e?.data?.message || 'Transfer gagal. Silakan coba lagi.')
+      setApiError(e?.data?.message || 'Transfer gagal. Periksa identifier penerima.')
       setModal(null)
     }
   }
+
   const onPayConfirm = async ({ amount, counterparty, description }) => {
     await applyTransaction({ type: 'KELUAR', amount, counterparty, description })
     afterMutation()
+  }
+
+  // Pembayaran QRIS (simulasi — sama dengan PayModal)
+  const onQrisPay = async ({ amount, counterparty, description }) => {
+    setApiError(null)
+    try {
+      await applyTransaction({ type: 'KELUAR', amount, counterparty, description })
+      afterMutation()
+    } catch (e) {
+      setApiError(e?.data?.message || 'Pembayaran QRIS gagal.')
+    }
   }
 
   const onPickQuickAction = (service) => {
@@ -125,30 +142,27 @@ export default function Dashboard() {
     else setPayService(service)
   }
 
-  // ---- derived: filtering, summary, pagination ----
   const filtersActive = filters.type !== 'ALL' || filters.from || filters.to || filters.q.trim() !== ''
-  const filtered = useMemo(() => filterTransactions(transactions, filters), [transactions, filters])
-  const summary = useMemo(() => monthlySummary(transactions), [transactions])
+  const filtered  = useMemo(() => filterTransactions(transactions, filters), [transactions, filters])
+  const summary   = useMemo(() => monthlySummary(transactions), [transactions])
 
-  const pages = Math.max(1, Math.ceil(filtered.length / PER))
+  const pages   = Math.max(1, Math.ceil(filtered.length / PER))
   const curPage = Math.min(page, pages - 1)
   const pageRows = filtered.slice(curPage * PER, curPage * PER + PER)
 
-  // reset to first page whenever the filter result set changes shape
   useEffect(() => { setPage(0) }, [filters])
 
   const initialLoading = loading || !hydrated
   const showPager = !initialLoading && pages > 1
   const showEmpty = !initialLoading && filtered.length === 0
-  const showRows = !initialLoading && filtered.length > 0
+  const showRows  = !initialLoading && filtered.length > 0
 
   return (
     <div
       className="page-enter"
       style={{
         minHeight: '100vh',
-        background:
-          'radial-gradient(900px 480px at 92% -10%, rgba(190,242,100,0.09), transparent 60%), radial-gradient(700px 560px at -6% 12%, rgba(23,25,29,0.05), transparent 55%), #EFF1EC',
+        background: 'radial-gradient(900px 480px at 92% -10%, rgba(190,242,100,0.09), transparent 60%), radial-gradient(700px 560px at -6% 12%, rgba(23,25,29,0.05), transparent 55%), #EFF1EC',
       }}
     >
       {/* ===== NAV ===== */}
@@ -157,12 +171,32 @@ export default function Dashboard() {
           <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
             <Logo size={38} textSize={19} />
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Bell notifikasi */}
+            <button
+              onClick={openNotif}
+              aria-label="Notifikasi"
+              title="Notifikasi"
+              style={{ position: 'relative', width: 40, height: 40, borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.12)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5C6B73' }}
+            >
+              <BellIcon size={18} />
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#7A3142', border: '2px solid #EFF1EC' }} />
+              )}
+            </button>
+
             <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
               <div style={{ fontSize: 13, color: '#5C6B73' }}>Halo,</div>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#17191D' }}>{displayName}</div>
             </div>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(150deg,#23262B,#17191D)', color: '#EFF1EC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 16 }}>{initial}</div>
+            {/* Avatar → profil */}
+            <Link
+              to="/profil"
+              title="Profil saya"
+              style={{ textDecoration: 'none', width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(150deg,#23262B,#17191D)', color: '#EFF1EC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 16 }}
+            >
+              {initial}
+            </Link>
             <button onClick={onLogout} className="icon-btn" aria-label="Keluar" title="Keluar" style={{ width: 38, height: 38, borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.14)', background: 'transparent', color: '#5C6B73', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <LogoutIcon size={18} />
             </button>
@@ -179,12 +213,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ===== MAIN ===== */}
+      {/* ===== MAIN GRID ===== */}
       <div data-grid className="dash-grid" style={{ maxWidth: 1120, margin: '0 auto', padding: '32px 28px 70px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: 28, alignItems: 'start' }}>
-        {/* LEFT: wallet card + actions + quick actions */}
+
+        {/* ---- KOLOM KIRI ---- */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          {/* Wallet card */}
           <div style={{ position: 'relative' }}>
-            <WalletCard balance={balance} lastUpdate={lastUpdate} user={user} show={showBalance} onToggle={() => setShowBalance((s) => !s)} />
+            <WalletCard balance={balance} lastUpdate={lastUpdate} user={user} show={showBalance} onToggle={() => setShowBalance(s => !s)} />
             {showStamp && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                 <div data-stamp style={{ width: 128, height: 128, border: '3px solid #4D7C0F', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,241,236,0.92)', boxShadow: '0 18px 40px -14px rgba(190,242,100,0.6)', animation: 'stampIn .5s cubic-bezier(.2,.8,.3,1) both' }}>
@@ -195,13 +232,37 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* action buttons */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={() => setModal('topup')} className="act-btn" style={{ flex: 1, cursor: 'pointer', border: 'none', padding: '14px 0', borderRadius: 10, background: '#BEF264', color: '#16210A', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: '0.01em', boxShadow: '0 10px 22px -10px rgba(190,242,100,0.7)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><PlusIcon size={18} strokeWidth={2.2} /> Top Up</button>
-            <button onClick={() => setModal('transfer')} className="act-btn" style={{ flex: 1, cursor: 'pointer', padding: '14px 0', borderRadius: 10, background: 'transparent', border: '1.5px solid #17191D', color: '#17191D', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><TransferIcon size={18} /> Transfer</button>
+          {/* Action buttons: Top Up + Transfer + Scan QRIS */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setModal('topup')} className="act-btn" style={{ flex: 1, cursor: 'pointer', border: 'none', padding: '14px 0', borderRadius: 10, background: '#BEF264', color: '#16210A', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: '0.01em', boxShadow: '0 10px 22px -10px rgba(190,242,100,0.7)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+              <PlusIcon size={17} strokeWidth={2.2} /> Top Up
+            </button>
+            <button onClick={() => setModal('transfer')} className="act-btn" style={{ flex: 1, cursor: 'pointer', padding: '14px 0', borderRadius: 10, background: 'transparent', border: '1.5px solid #17191D', color: '#17191D', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+              <TransferIcon size={17} /> Transfer
+            </button>
+            <button
+              onClick={() => setModal('scan')}
+              className="act-btn"
+              title="Scan QRIS"
+              aria-label="Scan QRIS"
+              style={{ flex: 'none', width: 52, cursor: 'pointer', padding: '14px 0', borderRadius: 10, background: '#17191D', border: 'none', color: '#BEF264', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <ScanIcon size={20} />
+            </button>
           </div>
 
           <QuickActions onPick={onPickQuickAction} />
+
+          {/* ===== PROMO SECTION ===== */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 500, fontSize: 15, color: '#17191D' }}>Promo & Cashback</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#5C6B73' }}>Terbaru</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {PROMOS.map(p => <PromoCard key={p.id} promo={p} />)}
+            </div>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 12, background: 'rgba(23,25,29,0.04)', border: '1px solid rgba(23,25,29,0.07)' }}>
             <span style={{ color: '#4D7C0F', display: 'flex', marginTop: 1 }}><CheckIcon size={15} strokeWidth={2.2} /></span>
@@ -209,7 +270,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RIGHT: summary + history */}
+        {/* ---- KOLOM KANAN ---- */}
         <div>
           <MonthlySummary summary={summary} />
 
@@ -220,13 +281,16 @@ export default function Dashboard() {
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: '#5C6B73' }}>Halaman buku tabungan — per baris, audit-ready</p>
               </div>
               <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button onClick={() => downloadCSV(filtered)} disabled={filtered.length === 0} style={{ ...exportBtn, opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer' }}><DownloadIcon size={15} /> CSV</button>
-                <button onClick={() => printRegion('printing-ledger')} disabled={filtered.length === 0} style={{ ...exportBtn, opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer' }}><PrinterIcon size={15} /> PDF</button>
+                <button onClick={() => downloadCSV(filtered)} disabled={filtered.length === 0} style={{ ...exportBtn, opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  <DownloadIcon size={15} /> CSV
+                </button>
+                <button onClick={() => printRegion('printing-ledger')} disabled={filtered.length === 0} style={{ ...exportBtn, opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  <PrinterIcon size={15} /> PDF
+                </button>
               </div>
             </div>
 
             {!initialLoading && <HistoryFilter filters={filters} setFilters={setFilters} active={!!filtersActive} />}
-
             {initialLoading && <Skeleton />}
 
             {showEmpty && (
@@ -236,58 +300,68 @@ export default function Dashboard() {
                   {filtersActive ? 'Tidak ada transaksi yang cocok dengan filter.' : 'Belum ada catatan — mulai dengan Top Up pertamamu.'}
                 </div>
                 {!filtersActive && (
-                  <button onClick={() => setModal('topup')} style={{ cursor: 'pointer', border: '1.5px solid #4D7C0F', background: 'transparent', color: '#4D7C0F', padding: '9px 16px', borderRadius: 10, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7 }}><PlusIcon size={16} strokeWidth={2.2} /> Top Up</button>
+                  <button onClick={() => setModal('topup')} style={{ cursor: 'pointer', border: '1.5px solid #4D7C0F', background: 'transparent', color: '#4D7C0F', padding: '9px 16px', borderRadius: 10, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <PlusIcon size={16} strokeWidth={2.2} /> Top Up
+                  </button>
                 )}
               </div>
             )}
 
             {showRows && (
               <div>
-                {pageRows.map((t) => <LedgerRow key={t.id} tx={t} onClick={() => setReceipt(t)} />)}
+                {pageRows.map(t => <LedgerRow key={t.id} tx={t} onClick={() => setReceipt(t)} />)}
               </div>
             )}
 
             {showPager && (
               <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px' }}>
-                <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={curPage <= 0} style={{ ...pagerBtn, opacity: curPage <= 0 ? 0.4 : 1, cursor: curPage <= 0 ? 'not-allowed' : 'pointer' }}><ChevronLeftIcon size={15} /> Sebelumnya</button>
+                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={curPage <= 0} style={{ ...pagerBtn, opacity: curPage <= 0 ? 0.4 : 1, cursor: curPage <= 0 ? 'not-allowed' : 'pointer' }}>
+                  <ChevronLeftIcon size={15} /> Sebelumnya
+                </button>
                 <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, letterSpacing: '0.06em', color: '#5C6B73' }}>Halaman {curPage + 1} / {pages}</span>
-                <button onClick={() => setPage((p) => p + 1)} disabled={curPage >= pages - 1} style={{ ...pagerBtn, opacity: curPage >= pages - 1 ? 0.4 : 1, cursor: curPage >= pages - 1 ? 'not-allowed' : 'pointer' }}>Selanjutnya <ChevronRightIcon size={15} /></button>
+                <button onClick={() => setPage(p => p + 1)} disabled={curPage >= pages - 1} style={{ ...pagerBtn, opacity: curPage >= pages - 1 ? 0.4 : 1, cursor: curPage >= pages - 1 ? 'not-allowed' : 'pointer' }}>
+                  Selanjutnya <ChevronRightIcon size={15} />
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ===== modals ===== */}
-      {modal === 'topup' && <TopUpModal onClose={() => setModal(null)} onConfirm={onTopupConfirm} />}
+      {/* ===== MODALS ===== */}
+      {modal === 'topup'    && <TopUpModal onClose={() => setModal(null)} onConfirm={onTopupConfirm} />}
       {modal === 'transfer' && <TransferModal balance={balance} onClose={() => setModal(null)} onConfirm={onTransferConfirm} />}
-      {modal === 'qr' && <ReceiveQRModal user={user} onClose={() => setModal(null)} />}
+      {modal === 'qr'       && <ReceiveQRModal user={user} onClose={() => setModal(null)} />}
+      {modal === 'scan'     && <ScanQRModal balance={balance} onClose={() => setModal(null)} onPay={onQrisPay} />}
       {payService && <PayModal service={payService} balance={balance} onClose={() => setPayService(null)} onConfirm={onPayConfirm} />}
-      {receipt && <ReceiptModal tx={receipt} onClose={() => setReceipt(null)} />}
+      {receipt    && <ReceiptModal tx={receipt} onClose={() => setReceipt(null)} />}
 
-      {/* ===== print-only mutasi (PDF export) ===== */}
+      {/* ===== NOTIFICATION PANEL ===== */}
+      {notifOpen && <NotificationPanel transactions={transactions} onClose={() => setNotifOpen(false)} />}
+
+      {/* print-only ledger */}
       <PrintableLedger transactions={filtered} balance={balance} summary={summary} user={user} />
     </div>
   )
 }
 
+// ---- Komponen-komponen ----
+
 function WalletCard({ balance, lastUpdate, user, show, onToggle }) {
-  const holder = (user?.name || 'Pengguna').toUpperCase()
+  const holder  = (user?.name || 'Pengguna').toUpperCase()
   const account = user?.account || '8021 4455 4021'
-  const tail = account.replace(/\s/g, '').slice(-4)
-  const masked = `•••• •••• •••• ${tail}`
-  const since = user?.createdAt ? new Date(user.createdAt) : null
+  const tail    = account.replace(/\s/g, '').slice(-4)
+  const masked  = `•••• •••• •••• ${tail}`
+  const since   = user?.created_at ? new Date(user.created_at) : null
   const sinceStr = since ? `${MONTHS[since.getMonth()]} '${String(since.getFullYear()).slice(2)}` : "JUN '26"
 
   return (
     <div className="wallet-card" style={{ position: 'relative', borderRadius: 22, padding: '22px 24px', color: '#EFF1EC', overflow: 'hidden', background: 'linear-gradient(150deg,#2C2F35 0%,#191B1F 52%,#0C0E11 100%)', boxShadow: '0 26px 50px -18px rgba(23,25,29,0.6)', transition: 'transform .25s ease, box-shadow .25s ease' }}>
-      {/* decorative layers */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(220px 120px at 86% -8%, rgba(190,242,100,0.28), transparent 65%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', right: -40, bottom: -46, width: 170, height: 170, border: '1.5px solid rgba(190,242,100,0.18)', borderRadius: '50%' }} />
       <div style={{ position: 'absolute', right: -10, bottom: -16, width: 110, height: 110, border: '1.5px solid rgba(190,242,100,0.12)', borderRadius: '50%' }} />
       <div className="wallet-sheen" style={{ position: 'absolute', top: 0, left: 0, width: '60%', height: '100%', background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.10) 50%, transparent 70%)', pointerEvents: 'none' }} />
 
-      {/* top row: brand + passbook label + contactless */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -303,11 +377,10 @@ function WalletCard({ balance, lastUpdate, user, show, onToggle }) {
         </div>
       </div>
 
-      {/* balance */}
       <div style={{ marginTop: 20, position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.55)' }}>Saldo Anda</span>
-          <button onClick={onToggle} aria-label={show ? 'Sembunyikan saldo' : 'Tampilkan saldo'} title={show ? 'Sembunyikan saldo' : 'Tampilkan saldo'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, border: '1px solid rgba(239,241,236,0.2)', background: 'rgba(239,241,236,0.06)', color: 'rgba(239,241,236,0.8)', cursor: 'pointer' }}>
+          <button onClick={onToggle} aria-label={show ? 'Sembunyikan saldo' : 'Tampilkan saldo'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, border: '1px solid rgba(239,241,236,0.2)', background: 'rgba(239,241,236,0.06)', color: 'rgba(239,241,236,0.8)', cursor: 'pointer' }}>
             {show ? <EyeIcon size={15} /> : <EyeOffIcon size={15} />}
           </button>
         </div>
@@ -317,7 +390,6 @@ function WalletCard({ balance, lastUpdate, user, show, onToggle }) {
         <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.45)', marginTop: 4 }}>terakhir update {lastUpdate}</div>
       </div>
 
-      {/* chip + account number */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22, position: 'relative' }}>
         <div style={{ width: 42, height: 31, borderRadius: 7, background: 'linear-gradient(150deg,#E9FBA8,#BEF264)', display: 'grid', placeItems: 'center', flex: 'none', boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.4)' }}>
           <div style={{ width: 26, height: 17, border: '1px solid rgba(23,25,29,0.4)', borderRadius: 3 }} />
@@ -325,7 +397,6 @@ function WalletCard({ balance, lastUpdate, user, show, onToggle }) {
         <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 16, letterSpacing: '0.12em', color: 'rgba(239,241,236,0.9)', fontFeatureSettings: "'tnum'" }}>{masked}</span>
       </div>
 
-      {/* holder + member since */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 16, position: 'relative' }}>
         <div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.4)' }}>Pemilik</div>
@@ -335,6 +406,36 @@ function WalletCard({ balance, lastUpdate, user, show, onToggle }) {
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.4)' }}>Member</div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 500, marginTop: 2, color: 'rgba(239,241,236,0.85)' }}>{sinceStr}</div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function PromoCard({ promo }) {
+  const isDark = promo.color === '#17191D'
+  return (
+    <div
+      className="promo-card"
+      style={{
+        borderRadius: 14,
+        padding: '14px 16px',
+        background: isDark ? '#17191D' : promo.color,
+        display: 'flex', alignItems: 'center', gap: 14,
+        cursor: 'default',
+        border: isDark ? 'none' : '1.5px solid rgba(23,25,29,0.08)',
+        boxShadow: isDark ? '0 14px 28px -18px rgba(23,25,29,0.6)' : '0 10px 24px -16px rgba(23,25,29,0.2)',
+        position: 'relative', overflow: 'hidden',
+      }}
+    >
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: isDark ? 'rgba(190,242,100,0.12)' : 'rgba(23,25,29,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDark ? '#BEF264' : '#4D7C0F', flex: 'none' }}>
+        {promo.icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 14, color: isDark ? '#EFF1EC' : '#17191D', marginBottom: 2 }}>{promo.title}</div>
+        <div style={{ fontSize: 12, color: isDark ? 'rgba(239,241,236,0.55)' : '#5C6B73' }}>{promo.desc}</div>
+      </div>
+      <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 9px', borderRadius: 999, background: isDark ? 'rgba(239,241,236,0.10)' : 'rgba(23,25,29,0.08)', color: isDark ? 'rgba(239,241,236,0.6)' : '#5C6B73', flex: 'none' }}>
+        {promo.tag}
       </div>
     </div>
   )
@@ -370,7 +471,7 @@ function Skeleton() {
   const skel = { background: 'linear-gradient(90deg,#ebede7 25%,#f5f6f2 50%,#ebede7 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.2s infinite' }
   return (
     <div>
-      {[0, 1, 2, 3, 4].map((i) => (
+      {[0, 1, 2, 3, 4].map(i => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 24px', borderBottom: '1px solid #f0f1ec' }}>
           <div data-skel style={{ width: 96, height: 34, borderRadius: 8, ...skel }} />
           <div data-skel style={{ width: 70, height: 22, borderRadius: 999, ...skel }} />
@@ -382,7 +483,6 @@ function Skeleton() {
   )
 }
 
-// Rendered hidden on screen; shown only when printing (history PDF export).
 function PrintableLedger({ transactions, balance, summary, user }) {
   return (
     <div id="print-ledger" className="print-only">
@@ -393,14 +493,12 @@ function PrintableLedger({ transactions, balance, summary, user }) {
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'monospace', fontSize: 11 }}>
         <thead>
-          <tr>
-            {['Kode', 'Tanggal', 'Waktu', 'Tipe', 'Lawan', 'Nominal', 'Saldo'].map((h) => (
-              <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #000', padding: '4px 6px' }}>{h}</th>
-            ))}
-          </tr>
+          <tr>{['Kode', 'Tanggal', 'Waktu', 'Tipe', 'Lawan', 'Nominal', 'Saldo'].map(h => (
+            <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #000', padding: '4px 6px' }}>{h}</th>
+          ))}</tr>
         </thead>
         <tbody>
-          {transactions.map((t) => {
+          {transactions.map(t => {
             const m = rowMeta(t)
             return (
               <tr key={t.id}>
@@ -420,6 +518,6 @@ function PrintableLedger({ transactions, balance, summary, user }) {
   )
 }
 
-const td = { borderBottom: '1px solid #ccc', padding: '4px 6px' }
-const pagerBtn = { background: 'transparent', border: '1.5px solid rgba(23,25,29,0.2)', color: '#17191D', padding: '8px 16px', borderRadius: 9, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }
-const exportBtn = { background: 'transparent', border: '1.5px solid rgba(23,25,29,0.2)', color: '#17191D', padding: '8px 14px', borderRadius: 9, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }
+const td         = { borderBottom: '1px solid #ccc', padding: '4px 6px' }
+const pagerBtn   = { background: 'transparent', border: '1.5px solid rgba(23,25,29,0.2)', color: '#17191D', padding: '8px 16px', borderRadius: 9, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }
+const exportBtn  = { background: 'transparent', border: '1.5px solid rgba(23,25,29,0.2)', color: '#17191D', padding: '8px 14px', borderRadius: 9, fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }
