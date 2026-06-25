@@ -1,30 +1,26 @@
-FROM php:8.3-cli-alpine
+FROM php:8.3-cli
 
-# Install system deps + PHP extensions
-RUN apk add --no-cache \
-        zip \
+RUN apt-get update && apt-get install -y \
         libzip-dev \
+        libpq-dev \
+        zip \
         unzip \
         git \
-        postgresql-dev \
     && docker-php-ext-install \
         pdo \
         pdo_sqlite \
-        pdo_mysql \
         pdo_pgsql \
         zip \
-        bcmath
+        bcmath \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copy app and install PHP deps
 COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Prepare SQLite file + permissions
 RUN mkdir -p database \
     && touch database/database.sqlite \
     && chmod -R 777 storage bootstrap/cache database
