@@ -17,7 +17,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 COPY . .
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --no-scripts --no-interaction --ignore-platform-reqs
 
 RUN chmod -R 777 storage bootstrap/cache
 
