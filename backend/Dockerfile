@@ -7,8 +7,6 @@ RUN apt-get update && apt-get install -y \
         unzip \
         git \
     && docker-php-ext-install \
-        pdo \
-        pdo_sqlite \
         pdo_pgsql \
         zip \
         bcmath \
@@ -21,9 +19,7 @@ WORKDIR /app
 COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN mkdir -p database \
-    && touch database/database.sqlite \
-    && chmod -R 777 storage bootstrap/cache database
+RUN chmod -R 777 storage bootstrap/cache
 
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
