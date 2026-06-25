@@ -1,0 +1,9 @@
+vendor/
+.git/
+node_modules/
+*.log
+.env
+storage/logs/*
+storage/framework/cache/*
+tests/
+database/*.sqlite

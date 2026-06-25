@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell.jsx'
 import OtpStep from '../components/OtpStep.jsx'
-import { UserIcon, LockIcon, PhoneIcon, EyeIcon, EyeOffIcon } from '../components/icons.jsx'
+import { UserIcon, LockIcon, PhoneIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
 import useAuth from '../hooks/useAuth.js'
 import { phoneShapeValid } from '../lib/auth.js'
+
+const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/redirect'
 
 // Halaman Login. METODE UTAMA (rubrik): email/username + password.
 // METODE BONUS: OTP WhatsApp (toggle di bawah). State `mode` mengatur tampilannya.
@@ -22,7 +24,11 @@ export default function Login() {
   const [phone, setPhone] = useState('')
   const [devCode, setDevCode] = useState(null)
 
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => {
+    // Tampilkan pesan jika Google OAuth gagal (redirect dari /masuk?error=google_gagal)
+    const p = new URLSearchParams(window.location.search)
+    return p.get('error') === 'google_gagal' ? 'Login dengan Google gagal. Silakan coba lagi.' : ''
+  })
   const [submitting, setSubmitting] = useState(false)
 
   const canSubmitPwd = identifier.trim() !== '' && password !== '' && !submitting
@@ -105,6 +111,10 @@ export default function Login() {
           <button type="button" onClick={() => { setMode('otp-phone'); setError('') }} style={altBtn}>
             <PhoneIcon size={16} /> Masuk dengan OTP WhatsApp
           </button>
+
+          <a href={GOOGLE_AUTH_URL} style={{ ...altBtn, textDecoration: 'none', color: '#17191D' }}>
+            <GoogleIcon size={18} /> Lanjutkan dengan Google
+          </a>
 
           <p style={footStyle}>
             Belum punya akun?{' '}

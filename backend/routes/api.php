@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,10 @@ Route::post('/login',    [AuthController::class, 'login']);              // utam
 // bonus: login via OTP WhatsApp (Fonnte)
 Route::post('/login/request-otp', [AuthController::class, 'requestLoginOtp']); // phone → kirim OTP
 Route::post('/verify-otp',        [AuthController::class, 'verifyOtp']);       // phone+code → token
+
+// ---- Google OAuth (Socialite stateless) ----
+Route::get('/auth/google/redirect',  [SocialAuthController::class, 'redirectToGoogle']);   // redirect ke Google
+Route::get('/auth/google/callback',  [SocialAuthController::class, 'handleGoogleCallback']); // callback dari Google
 
 // Midtrans Webhook
 Route::post('/webhooks/midtrans', [\App\Http\Controllers\MidtransWebhookController::class, 'handleNotification']);

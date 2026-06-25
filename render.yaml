@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: trustpay-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    buildContext: ./backend
+    plan: free
+    envVars:
+      - key: APP_NAME
+        value: TrustPay
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: OTP_CHANNEL
+        value: log
+      # Set these manually in Render dashboard (sensitive):
+      # APP_KEY       → output of: php artisan key:generate --show
+      # APP_URL       → https://trustpay-api.onrender.com  (isi setelah deploy)
+      # FRONTEND_URL  → https://your-project.vercel.app
+      # MIDTRANS_SERVER_KEY, MIDTRANS_CLIENT_KEY
+      # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI

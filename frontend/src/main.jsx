@@ -6,11 +6,12 @@ import { isAuthenticated } from './lib/auth.js'
 
 // Lazy load setiap halaman — chunk terpisah di build, tidak diunduh sampai dibutuhkan.
 // Ini mengurangi ukuran bundle awal dan mempercepat First Contentful Paint.
-const Landing   = lazy(() => import('./pages/Landing.jsx'))
-const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
-const Login     = lazy(() => import('./pages/Login.jsx'))
-const Register  = lazy(() => import('./pages/Register.jsx'))
-const Profile   = lazy(() => import('./pages/Profile.jsx'))
+const Landing      = lazy(() => import('./pages/Landing.jsx'))
+const Dashboard    = lazy(() => import('./pages/Dashboard.jsx'))
+const Login        = lazy(() => import('./pages/Login.jsx'))
+const Register     = lazy(() => import('./pages/Register.jsx'))
+const Profile      = lazy(() => import('./pages/Profile.jsx'))
+const AuthCallback = lazy(() => import('./pages/AuthCallback.jsx'))
 
 /** Spinner saat Suspense menunggu chunk halaman diunduh */
 const PageLoader = () => (
@@ -56,6 +57,12 @@ const router = createBrowserRouter([
   {
     path: '/profil',
     element: <Suspense fallback={<PageLoader />}><Protected><Profile /></Protected></Suspense>,
+  },
+  {
+    // Penerima redirect OAuth Google — TIDAK dibungkus Guest/Protected
+    // karena token belum tersimpan saat halaman ini dimuat pertama kali
+    path: '/auth/callback',
+    element: <Suspense fallback={<PageLoader />}><AuthCallback /></Suspense>,
   },
 ])
 

@@ -43,4 +43,13 @@ return [
         ],
     ],
 
+    // Google OAuth via Laravel Socialite.
+    // Daftarkan kredensial di: https://console.cloud.google.com/ → APIs & Services → Credentials
+    // Authorized redirect URIs: {APP_URL}/api/auth/google/callback
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];

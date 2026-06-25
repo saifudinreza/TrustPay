@@ -26,7 +26,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * Trait HasApiTokens memungkinkan `$user->createToken(...)` dari Sanctum.
  */
-#[Fillable(['name', 'username', 'email', 'phone', 'password'])]
+#[Fillable(['name', 'username', 'email', 'phone', 'password', 'google_id'])]
 #[Hidden(['password', 'remember_token'])] // JANGAN pernah kirim password/token ke frontend
 class User extends Authenticatable
 {

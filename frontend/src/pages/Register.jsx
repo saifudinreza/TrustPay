@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell.jsx'
 import { primaryBtn } from './Login.jsx'
-import { UserIcon, MailIcon, PhoneIcon, LockIcon, EyeIcon, EyeOffIcon } from '../components/icons.jsx'
+import { UserIcon, MailIcon, PhoneIcon, LockIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
 import useAuth from '../hooks/useAuth.js'
 import { emailShapeValid, phoneShapeValid } from '../lib/auth.js'
+
+const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/redirect'
 
 // Halaman Register (utama, sesuai rubrik): nama, username, email, no HP (opsional),
 // password + konfirmasi → langsung dapat token & masuk dashboard.
@@ -115,6 +117,16 @@ export default function Register() {
         <button type="submit" disabled={!canSubmit} className={canSubmit ? 'cta-gold' : undefined} style={primaryBtn(canSubmit)}>
           {submitting ? 'Membuat akun…' : 'Daftar'}
         </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0 4px' }}>
+          <span style={{ flex: 1, height: 1, background: 'rgba(23,25,29,0.12)' }} />
+          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#5C6B73' }}>atau daftar dengan</span>
+          <span style={{ flex: 1, height: 1, background: 'rgba(23,25,29,0.12)' }} />
+        </div>
+
+        <a href={GOOGLE_AUTH_URL} style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.18)', background: 'transparent', color: '#17191D', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}>
+          <GoogleIcon size={18} /> Daftar dengan Google
+        </a>
 
         <p style={{ marginTop: 18, fontSize: 14, color: '#5C6B73', textAlign: 'center' }}>
           Sudah punya akun?{' '}
