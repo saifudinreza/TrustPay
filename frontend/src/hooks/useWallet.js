@@ -176,10 +176,14 @@ export default function useWallet() {
       return res.transaction
     }
 
-    // Pembayaran tagihan (Pulsa/PLN/Air/Internet) = SIMULASI UI saja, belum ada
-    // endpoint backend-nya. Sengaja TIDAK mengubah saldo/riwayat agar tidak desync
-    // dengan server saat halaman di-reload (baris palsu akan hilang).
-    return { id: 'sim-' + now.getTime(), code: 'SIMULASI', simulated: true }
+    // Pembayaran tagihan (Pulsa/PLN/Air/Internet) — POST /pay, potong saldo di backend
+    if (type === 'KELUAR') {
+      const res = await apiPost('/pay', { amount, description })
+      setBalance(Number(res.wallet.balance))
+      setLastUpdate(fmtTime(now))
+      setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
+      return res.transaction
+    }
   }, [balance])
 
   return { hydrated, balance, transactions, lastUpdate, applyTransaction }

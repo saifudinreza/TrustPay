@@ -103,6 +103,34 @@ class WalletController extends Controller
     }
 
     /**
+     * POST /pay — pembayaran tagihan (Pulsa/PLN/Air/Internet).
+     * Memotong saldo dan mencatat TRANSFER_OUT tanpa counterpart.
+     */
+    public function pay(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'amount'      => ['required', 'integer', 'min:1000', 'max:10000000'],
+            'description' => ['nullable', 'string', 'max:200'],
+        ]);
+
+        try {
+            $result = $this->walletService->pay(
+                $request->user(),
+                (int) $data['amount'],
+                $data['description'] ?? 'Pembayaran',
+            );
+
+            return response()->json([
+                'message'     => 'Pembayaran berhasil.',
+                'wallet'      => ['balance' => (float) $result['wallet']->balance],
+                'transaction' => $this->formatTx($result['transaction']),
+            ]);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+        }
+    }
+
+    /**
      * GET /transactions — riwayat semua transaksi user, terbaru dulu.
      * counterpartUser di-eager-load supaya tidak N+1 query.
      */

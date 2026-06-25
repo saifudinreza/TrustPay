@@ -73,8 +73,6 @@ export default function PayModal({ service, balance, onClose, onConfirm }) {
                 <service.Icon size={20} />
               </div>
               <h3 style={modalTitle}>{service.label}</h3>
-              {/* Badge simulasi — transparan terhadap user */}
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4D7C0F', border: '1px solid rgba(190,242,100,0.5)', borderRadius: 999, padding: '2px 8px' }}>Simulasi</span>
             </div>
             <button onClick={onClose} style={closeBtn} aria-label="Tutup"><CloseIcon size={18} /></button>
           </div>

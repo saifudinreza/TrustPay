@@ -205,6 +205,33 @@ class WalletService
         });
     }
 
+    // Pembayaran tagihan simulasi (Pulsa/PLN/Air/Internet): potong saldo, catat TRANSFER_OUT.
+    public function pay(User $user, int $amount, string $description): array
+    {
+        return DB::transaction(function () use ($user, $amount, $description) {
+            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+
+            if (bccomp((string) $wallet->balance, (string) $amount, 2) < 0) {
+                throw new \DomainException('Saldo tidak cukup.', 400);
+            }
+
+            $wallet->balance = bcsub((string) $wallet->balance, (string) $amount, 2);
+            $wallet->save();
+
+            $tx = Transaction::create([
+                'code'          => $this->generateCode(),
+                'user_id'       => $user->id,
+                'type'          => 'TRANSFER_OUT',
+                'status'        => 'SUCCESS',
+                'amount'        => $amount,
+                'balance_after' => $wallet->balance,
+                'description'   => $description,
+            ]);
+
+            return ['wallet' => $wallet, 'transaction' => $tx];
+        });
+    }
+
     private function generateCode(): string
     {
         return 'TRX-' . now()->format('Ymd') . '-' . strtoupper(Str::random(6));
