@@ -5,6 +5,7 @@ import { primaryBtn } from './Login.jsx'
 import { UserIcon, MailIcon, PhoneIcon, LockIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
 import useAuth from '../hooks/useAuth.js'
 import { emailShapeValid, phoneShapeValid } from '../lib/auth.js'
+import { T, FONT } from '../lib/theme.js'
 
 const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/redirect'
 
@@ -47,15 +48,15 @@ export default function Register() {
     }
   }
 
-  const fieldErr = (cond) => (touched && cond ? '#7A3142' : 'rgba(23,25,29,0.18)')
+  const fieldErr = (cond) => (touched && cond ? T.outRose : T.border)
 
   return (
-    <AuthShell tagline={'Buka buku tabungan\ndigitalmu — gratis\n& tercatat rapi.'}>
+    <AuthShell tagline={'Buka dompet digitalmu —\ngratis, modern & aman\ndengan PIN transaksi.'}>
       <form onSubmit={onSubmit} className="auth-form-enter" style={{ width: '100%', maxWidth: 400 }}>
-        <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: '#17191D' }}>
+        <h1 style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '0 0 6px', color: T.ink }}>
           Daftar Akun
         </h1>
-        <div style={{ height: 3, width: 44, background: '#BEF264', borderRadius: 2, marginBottom: 20 }} />
+        <div style={{ height: 3, width: 44, background: T.btnGrad, borderRadius: 2, marginBottom: 20 }} />
 
         {error && (
           <div role="alert" style={alertStyle}>{error}</div>
@@ -79,7 +80,7 @@ export default function Register() {
         </Field>
         {touched && !emailValid && <Hint>Format email tidak valid.</Hint>}
 
-        <label style={{ ...fieldLabel, marginTop: 14 }}>Nomor HP <span style={{ fontWeight: 400, color: '#5C6B73' }}>(opsional, untuk transfer &amp; OTP)</span></label>
+        <label style={{ ...fieldLabel, marginTop: 14 }}>Nomor HP <span style={{ fontWeight: 400, color: T.muted }}>(opsional, untuk transfer &amp; OTP)</span></label>
         <Field icon={<PhoneIcon size={18} />}>
           <input value={form.phone} onChange={set('phone')} placeholder="0812-3456-7890" inputMode="tel" autoComplete="tel" style={input(fieldErr(!phoneValid))} />
         </Field>
@@ -119,18 +120,18 @@ export default function Register() {
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0 4px' }}>
-          <span style={{ flex: 1, height: 1, background: 'rgba(23,25,29,0.12)' }} />
-          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#5C6B73' }}>atau daftar dengan</span>
-          <span style={{ flex: 1, height: 1, background: 'rgba(23,25,29,0.12)' }} />
+          <span style={{ flex: 1, height: 1, background: T.border }} />
+          <span style={{ fontFamily: FONT.mono, fontSize: 12, color: T.muted }}>atau daftar dengan</span>
+          <span style={{ flex: 1, height: 1, background: T.border }} />
         </div>
 
-        <a href={GOOGLE_AUTH_URL} style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.18)', background: 'transparent', color: '#17191D', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}>
+        <a href={GOOGLE_AUTH_URL} style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: `1px solid ${T.border}`, background: T.surface2, color: T.ink, fontFamily: FONT.sans, fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}>
           <GoogleIcon size={18} /> Daftar dengan Google
         </a>
 
-        <p style={{ marginTop: 18, fontSize: 14, color: '#5C6B73', textAlign: 'center' }}>
+        <p style={{ marginTop: 18, fontSize: 14, color: T.muted, textAlign: 'center' }}>
           Sudah punya akun?{' '}
-          <Link to="/masuk" style={{ color: '#4D7C0F', fontWeight: 600, textDecoration: 'none' }}>Masuk</Link>
+          <Link to="/masuk" style={{ color: T.goldBright, fontWeight: 600, textDecoration: 'none' }}>Masuk</Link>
         </p>
       </form>
     </AuthShell>
@@ -148,23 +149,23 @@ function firstError(err) {
 function Field({ icon, children }) {
   return (
     <div style={{ position: 'relative' }}>
-      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#5C6B73', display: 'flex' }}>{icon}</span>
+      <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: T.muted, display: 'flex' }}>{icon}</span>
       {children}
     </div>
   )
 }
 
 function Hint({ children }) {
-  return <div style={{ marginTop: 6, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#7A3142' }}>{children}</div>
+  return <div style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 12, color: T.outRose }}>{children}</div>
 }
 
-const fieldLabel = { display: 'block', fontSize: 14, fontWeight: 600, color: '#17191D', marginBottom: 8 }
-const alertStyle = { marginBottom: 18, padding: '12px 14px', borderRadius: 10, background: 'rgba(122,49,66,0.08)', border: '1px solid rgba(122,49,66,0.25)', color: '#7A3142', fontSize: 14, fontWeight: 500 }
-const eyeBtn = { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', height: 38, width: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#5C6B73', borderRadius: 8 }
+const fieldLabel = { display: 'block', fontSize: 14, fontWeight: 600, color: T.inkSoft, marginBottom: 8 }
+const alertStyle = { marginBottom: 18, padding: '12px 14px', borderRadius: 12, background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', color: T.outRose, fontSize: 14, fontWeight: 500 }
+const eyeBtn = { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', height: 38, width: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: T.muted, borderRadius: 8 }
 function input(borderColor) {
   return {
-    width: '100%', height: 50, padding: '0 14px 0 44px', borderRadius: 10,
-    border: `1.5px solid ${borderColor}`, background: '#fbfcf9', outline: 'none',
-    fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, color: '#17191D',
+    width: '100%', height: 52, padding: '0 14px 0 44px', borderRadius: 12,
+    border: `1.5px solid ${borderColor}`, background: T.surface2, outline: 'none',
+    fontFamily: FONT.sans, fontSize: 15, color: T.ink,
   }
 }

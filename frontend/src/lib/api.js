@@ -61,4 +61,5 @@ async function request(method, path, body) {
 // Shortcut per metode HTTP
 export const apiGet    = (path)        => request('GET',    path)
 export const apiPost   = (path, body)  => request('POST',   path, body)
+export const apiPut    = (path, body)  => request('PUT',    path, body)
 export const apiDelete = (path)        => request('DELETE', path)

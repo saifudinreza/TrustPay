@@ -90,12 +90,21 @@ export default function useWallet() {
    *  - Tidak menyentuh API; kembalikan objek dummy dengan flag `simulated: true`.
    *    Saldo dan riwayat TIDAK diubah agar tidak desync dengan server.
    */
-  const applyTransaction = useCallback(async ({ type, amount, recipient, description = '' }) => {
+  const applyTransaction = useCallback(async ({ type, amount, recipient, description = '', pin }) => {
     const now = new Date()
 
     if (type === 'TOPUP') {
-      // Langkah 1: inisialisasi transaksi di backend + dapatkan snap_token Midtrans
       const res = await apiPost('/topup', { amount })
+
+      // Direct topup (tanpa Midtrans) — langsung tambah saldo
+      if (res.direct) {
+        setBalance(Number(res.wallet.balance))
+        setLastUpdate(fmtTime(new Date()))
+        setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
+        return res.transaction
+      }
+
+      // Midtrans topup — butuh Snap popup
       const snapToken = res.snap_token
       const txCode = res.transaction.code
 
@@ -105,17 +114,14 @@ export default function useWallet() {
           return
         }
 
-        // Tampilkan transaksi PENDING langsung di daftar agar user tahu sedang diproses
         setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
 
         window.snap.pay(snapToken, {
-          // Pembayaran berhasil → konfirmasi ke backend untuk sinkronkan status
           onSuccess: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
               setBalance(Number(confirmRes.wallet.balance))
               setLastUpdate(fmtTime(new Date()))
-              // Ganti baris PENDING dengan baris SUCCESS terbaru
               setTransactions((prev) => {
                 const filtered = prev.filter((tx) => tx.code !== txCode)
                 return [normalizeTx(confirmRes.transaction), ...filtered]
@@ -123,7 +129,6 @@ export default function useWallet() {
               resolve(confirmRes.transaction)
             } catch (e) { reject(e) }
           },
-          // Pembayaran pending (transfer bank, dll) → cek status awal
           onPending: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
@@ -136,7 +141,6 @@ export default function useWallet() {
               resolve(confirmRes.transaction)
             } catch (e) { reject(e) }
           },
-          // Pembayaran gagal → tandai FAILED di list
           onError: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
@@ -147,7 +151,6 @@ export default function useWallet() {
               reject(new Error('Pembayaran gagal.'))
             } catch (e) { reject(e) }
           },
-          // User menutup popup Snap → tetap cek status (mungkin sudah dibayar di bank)
           onClose: async function () {
             try {
               const confirmRes = await apiPost('/topup/confirm', { code: txCode })
@@ -159,7 +162,6 @@ export default function useWallet() {
               })
               resolve(confirmRes.transaction)
             } catch (e) {
-              // Jika konfirmasi gagal, biarkan transaksi tetap PENDING
               resolve(res.transaction)
             }
           },
@@ -167,18 +169,18 @@ export default function useWallet() {
       })
     }
 
-    // Transfer ke user lain — POST /transfer, saldo diupdate atomik di backend
+    // Transfer ke user lain — POST /transfer (butuh PIN), saldo diupdate atomik di backend
     if (type === 'KELUAR' && recipient) {
-      const res = await apiPost('/transfer', { recipient, amount, description })
+      const res = await apiPost('/transfer', { recipient, amount, description, pin })
       setBalance(Number(res.wallet.balance))
       setLastUpdate(fmtTime(now))
       setTransactions((prev) => [normalizeTx(res.transaction), ...prev])
       return res.transaction
     }
 
-    // Pembayaran tagihan (Pulsa/PLN/Air/Internet) — POST /pay, potong saldo di backend
+    // Pembayaran tagihan (Pulsa/PLN/Air/Internet) — POST /pay (butuh PIN), potong saldo di backend
     if (type === 'KELUAR') {
-      const res = await apiPost('/pay', { amount, description })
+      const res = await apiPost('/pay', { amount, description, pin })
       setBalance(Number(res.wallet.balance))
       setLastUpdate(fmtTime(now))
       setTransactions((prev) => [normalizeTx(res.transaction), ...prev])

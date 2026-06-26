@@ -72,7 +72,7 @@ export default function HeroScene() {
                 bottom: 18,
                 width: 96,
                 height: 96,
-                border: '2px solid rgba(190,242,100,0.28)',
+                border: '2px solid rgba(201,149,43,0.30)',
                 borderRadius: '50%',
                 transform: 'rotate(-8deg)',
                 display: 'flex',
@@ -85,7 +85,7 @@ export default function HeroScene() {
                   fontFamily: "'IBM Plex Mono',monospace",
                   fontSize: 11,
                   letterSpacing: '0.14em',
-                  color: 'rgba(190,242,100,0.4)',
+                  color: 'rgba(201,149,43,0.5)',
                   textTransform: 'uppercase',
                 }}
               >
@@ -94,7 +94,7 @@ export default function HeroScene() {
             </div>
             <Dot top={14} color="#2F6F4E" />
             <Dot top={120} color="#7A3142" />
-            <Dot top={226} color="#BEF264" />
+            <Dot top={226} color="#C9952B" />
             {/* garis-garis ledger mini */}
             <LedgerLines />
           </div>
@@ -110,10 +110,10 @@ export default function HeroScene() {
               transform: 'translateZ(24px)',
               borderRadius: 20,
               padding: '22px 24px',
-              color: '#EFF1EC',
+              color: '#FFFFFF',
               overflow: 'hidden',
-              background: 'linear-gradient(155deg,#2A2D33 0%,#17191D 58%,#0E1014 100%)',
-              boxShadow: '0 26px 50px -18px rgba(23,25,29,0.6)',
+              background: 'linear-gradient(150deg, #3A2E16 0%, #261F12 52%, #100C07 100%)',
+              boxShadow: '0 26px 50px -18px rgba(201,149,43,0.6)',
             }}
           >
             {/* highlight sudut kiri-atas */}
@@ -121,7 +121,7 @@ export default function HeroScene() {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'radial-gradient(160px 80px at 82% 6%, rgba(190,242,100,0.16), transparent 70%)',
+                background: 'radial-gradient(160px 80px at 82% 6%, rgba(255,255,255,0.22), transparent 70%)',
                 pointerEvents: 'none',
               }}
             />
@@ -133,7 +133,7 @@ export default function HeroScene() {
                 bottom: -26,
                 width: 120,
                 height: 120,
-                border: '2px solid rgba(190,242,100,0.18)',
+                border: '2px solid rgba(255,255,255,0.20)',
                 borderRadius: '50%',
                 transform: 'rotate(-8deg)',
               }}
@@ -142,7 +142,7 @@ export default function HeroScene() {
             {/* baris atas: wordmark + contactless */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#BEF264' }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />
                 <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: '0.01em' }}>TrustPay</span>
               </div>
               <Contactless />
@@ -151,27 +151,27 @@ export default function HeroScene() {
             {/* chip + nomor kartu */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 16, position: 'relative' }}>
               <Chip />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 15, letterSpacing: '0.1em', color: 'rgba(239,241,236,0.85)', fontFeatureSettings: "'tnum'" }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 15, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.9)', fontFeatureSettings: "'tnum'" }}>
                 •••• •••• •••• 4021
               </span>
             </div>
 
             {/* saldo */}
             <div style={{ marginTop: 16, position: 'relative' }}>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(239,241,236,0.55)', marginBottom: 4 }}>
+              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
                 Saldo Anda
               </div>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, fontSize: 32, letterSpacing: '-0.01em', fontFeatureSettings: "'tnum'" }}>
+              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, fontSize: 32, letterSpacing: '-0.01em', fontFeatureSettings: "'tnum'" }}>
                 Rp 2.450.000
               </div>
             </div>
 
             {/* tombol aksi (dekoratif) */}
             <div style={{ display: 'flex', gap: 10, marginTop: 18, position: 'relative' }}>
-              <div style={{ flex: 1, textAlign: 'center', padding: '11px 0', borderRadius: 10, background: '#BEF264', color: '#16210A', fontSize: 14, fontWeight: 700 }}>
+              <div style={{ flex: 1, textAlign: 'center', padding: '11px 0', borderRadius: 10, background: '#fff', color: '#C9952B', fontSize: 14, fontWeight: 700 }}>
                 + Top Up
               </div>
-              <div style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1.5px solid rgba(239,241,236,0.4)', color: '#EFF1EC', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+              <div style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.45)', color: '#fff', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
                 <TransferIcon size={16} /> Transfer
               </div>
             </div>
@@ -208,8 +208,8 @@ export default function HeroScene() {
             transform: 'translateZ(60px)',
             animation: 'chipFloat1 8s ease-in-out infinite 1.5s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#17191D', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: '#BEF264', letterSpacing: '0.04em' }}>QR</span>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#F5CE53,#C9952B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: '#fff', letterSpacing: '0.04em' }}>QR</span>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#17191D' }}>Bayar QRIS</div>
@@ -223,19 +223,19 @@ export default function HeroScene() {
               style={{
                 width: '100%',
                 height: '100%',
-                border: '2.5px solid #4D7C0F',
+                border: '2.5px solid #F5CE53',
                 borderRadius: '50%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(239,241,236,0.86)',
+                background: 'rgba(18,11,28,0.9)',
                 backdropFilter: 'blur(2px)',
-                boxShadow: '0 18px 30px -12px rgba(190,242,100,0.55)',
+                boxShadow: '0 18px 30px -12px rgba(245,206,83,0.6)',
               }}
             >
-              <span style={{ color: '#4D7C0F', display: 'flex' }}><CheckIcon size={24} strokeWidth={2.6} /></span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.16em', color: '#4D7C0F', textTransform: 'uppercase', marginTop: 4 }}>Berhasil</span>
+              <span style={{ color: '#F5CE53', display: 'flex' }}><CheckIcon size={24} strokeWidth={2.6} /></span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '0.16em', color: '#F5CE53', textTransform: 'uppercase', marginTop: 4 }}>Berhasil</span>
             </div>
           </div>
         </div>
@@ -270,8 +270,8 @@ function Contactless() {
 
 function Chip() {
   return (
-    <div style={{ width: 38, height: 28, borderRadius: 6, background: 'linear-gradient(150deg,#E9FBA8,#BEF264)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-      <div style={{ width: 22, height: 15, border: '1px solid rgba(23,25,29,0.35)', borderRadius: 3 }} />
+    <div style={{ width: 38, height: 28, borderRadius: 6, background: 'linear-gradient(150deg,#FBE7A1,#E9C36B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+      <div style={{ width: 22, height: 15, border: '1px solid rgba(120,80,20,0.45)', borderRadius: 3 }} />
     </div>
   )
 }

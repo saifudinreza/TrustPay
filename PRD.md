@@ -1,345 +1,349 @@
-# PRD — Mini Wallet API & Dashboard
+# PRD — TrustPay: Buku Tabungan Digital (Mini Wallet)
 **Exam Penyaluran Kerja — Full Stack Web Development Bootcamp (Dibimbing.id)**
 
 | Item | Detail |
 |---|---|
 | Author | Saifudin Reza |
-| Versi | 1.0 |
-| Tanggal dibuat | 21 Juni 2026 |
-| Deadline submit | 27 Juni 2026, 23.50 WIB |
-| Presentasi | H+7 dari Take Home Test diberikan |
-| Status | Draft — menunggu konfirmasi beberapa keputusan teknis (lihat §16) |
+| Versi | 2.0 |
+| Tanggal | 26 Juni 2026 |
+| Deadline | 27 Juni 2026, 23.50 WIB |
 
 ---
 
-## 1. Overview
+## 1. Ringkasan Produk
 
-Mini Wallet API & Dashboard adalah aplikasi simulasi dompet digital (e-wallet) yang memungkinkan user melakukan **top-up saldo**, **transfer saldo antar user**, dan **melihat riwayat mutasi**. Project ini dibangun sebagai bukti kompetensi (take home test) yang menilai kemampuan implementasi autentikasi aman, integritas transaksi finansial (transactional integrity), validasi ketat, dan dashboard SPA berbasis React.
-
-Konteks penting: ini adalah **exam berbobot kelulusan** (skor minimum lulus Penyaluran Kerja: 80), dipresentasikan ke mentor, dan ada sanksi skor 0 jika terdeteksi 100% mengandalkan AI. PRD ini disusun supaya proses pengerjaan tetap terstruktur dan **dipahami penuh oleh pengerjanya**, bukan sekadar di-generate.
+TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabungan Digital** — setiap rupiah tercatat secara permanen layaknya buku tabungan bank. Pengguna dapat melakukan top up saldo, transfer antar pengguna, bayar tagihan (Pulsa/PLN/PDAM/Internet), scan & bayar QRIS, redeem voucher, dan mendapatkan cashback dari setiap transaksi.
 
 ---
 
-## 2. Tujuan (Objectives)
+## 2. Tujuan
 
-1. Mengimplementasikan sistem autentikasi aman (register & login) menggunakan Laravel Sanctum.
-2. Membangun sistem Wallet dengan prinsip **transactional integrity** (atomic, rollback-safe).
-3. Menerapkan validasi ketat & security best practice di setiap endpoint mutasi saldo.
-4. Membangun Dashboard SPA dengan React yang responsif terhadap state loading & error dari API.
-5. Menunjukkan kemampuan problem solving & clean architecture yang bisa dijelaskan ulang secara verbal saat presentasi.
+1. Membangun sistem dompet digital dengan integritas transaksi penuh (atomic, rollback-safe).
+2. Menyediakan autentikasi aman (Laravel Sanctum + Google OAuth + OTP WhatsApp).
+3. Menyediakan dashboard SPA real-time dengan React.
+4. Mengintegrasikan fitur promo, cashback, dan voucher untuk engagement pengguna.
+5. Mendemonstrasikan kemampuan full stack: Laravel API, React SPA, integrasi pihak ketiga.
 
 ---
 
-## 3. User & Persona
+## 3. Tech Stack
 
-| Persona | Kebutuhan |
+| Layer | Teknologi |
 |---|---|
-| **User terdaftar** | Bisa register, login, lihat saldo, top up, transfer ke user lain, lihat riwayat transaksi miliknya sendiri |
-| **Mentor / Penilai** | Bisa cek clean code, transactional integrity, validasi, dan hasil presentasi |
+| Backend | Laravel 13, PHP 8.3 |
+| Database | MySQL (SQLite fallback) |
+| Auth | Sanctum (token/cookie), Socialite (Google OAuth), OTP WhatsApp (Fonnte) |
+| Payment Gateway | Midtrans Snap (sandbox/production) |
+| Frontend | React 18, Vite 5, Tailwind CSS 3 |
+| Deployment BE | Docker / Render |
+| Deployment FE | Vercel |
 
 ---
 
-## 4. Scope
+## 4. Fitur-Fitur
 
-### 4.1 In Scope
-- Auth: Register, Login (Sanctum token / cookie session)
-- Wallet: cek saldo, top up, transfer, riwayat transaksi
-- Validasi ketat di BE dan FE
-- DB transaction + rollback pada transfer
-- Middleware auth di semua endpoint mutasi/lihat data sensitif
-- Dashboard SPA: Login page, Dashboard page (saldo, top up, transfer form, tabel riwayat)
-- Error handling & loading state di FE
-- Dokumentasi API (Postman/PDF) — optional tapi disarankan untuk poin tambahan
+### 4.1 Autentikasi
+- Register: name, username, email, phone (opsional), password
+- Login: email/username + password → token Sanctum
+- OTP WhatsApp (bonus): login tanpa password via kode OTP
+- Google OAuth (bonus): login satu klik via Google
+- Atur PIN transaksi 6 digit
 
-### 4.2 Out of Scope
-- Payment gateway sungguhan (top up murni simulasi, tidak ada proses pembayaran eksternal)
-- Multi-currency
-- Notifikasi email/SMS
-- Role admin / manajemen user oleh admin
-- Reset password / forgot password (tidak diminta di requirement, bisa jadi nice-to-have kalau waktu cukup)
+### 4.2 Dompet Digital (Wallet)
+- Cek saldo real-time
+- Top up saldo (**Direct Mode** untuk demo, **Midtrans Snap** untuk production)
+- Transfer antar pengguna (via email/username/phone)
+- Riwayat transaksi (filter, cari, export CSV, cetak PDF)
+
+### 4.3 Pembayaran Tagihan
+- Pulsa, Listrik PLN, Air PDAM, Internet
+- Potong saldo langsung dengan verifikasi PIN
+
+### 4.4 QRIS
+- **Scan QRIS**: kamera langsung (BarcodeDetector API) baca QRIS merchant → bayar otomatis
+- Demo mode untuk browser yang tidak mendukung kamera
+- **Terima QR**: generate QR untuk menerima transfer
+
+### 4.5 Promo & Cashback
+- Cashback 10% untuk transfer sesama TrustPay (maks Rp 50.000)
+- Cashback 5% untuk bayar tagihan (maks Rp 25.000)
+- Cashback otomatis masuk ke saldo sebagai transaksi TOPUP
+
+### 4.6 Voucher
+- Redeem kode voucher untuk saldo gratis
+- Validasi: kode aktif, belum kadaluarsa, kuota tersedia, belum pernah dipakai
+- Voucher contoh: `WELCOME10` (Rp 10.000), `BONUS50` (Rp 50.000), `FREEBAL` (Rp 15.000)
 
 ---
 
-## 5. Tech Stack
-
-| Layer | Teknologi | Catatan |
-|---|---|---|
-| Backend | Laravel 11 | REST API |
-| Auth | Laravel Sanctum | Token-based / cookie-based (lihat §16) |
-| Database | MySQL | Pakai DB transaction (`DB::transaction`) untuk transfer |
-| Frontend | React + Vite | SPA, tanpa SSR supaya setup lebih ringan & cepat |
-| HTTP Client | Axios atau Fetch API | Axios disarankan (interceptor untuk token/cookie) |
-| State management | React Context / useState (cukup untuk skala app ini, tidak perlu Redux) |
-| Styling | Tailwind CSS | Cepat untuk styling dashboard |
-| Deployment BE | Railway (Docker) | Konsisten dengan project sebelumnya (KasirAI) |
-| Deployment FE | Vercel | |
-
----
-
-## 6. Data Model
-
-### 6.1 Entity Overview
+## 5. Entity Relationship Diagram
 
 ```
 users (1) ────── (1) wallets
-users (1) ────── (n) transactions  [sebagai sender / receiver]
+users (1) ────── (n) transactions
+users (n) ────── (n) vouchers  [pivot: user_voucher]
 ```
 
-### 6.2 Tabel `users`
+### Tabel `users`
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | id | bigint, PK | |
 | name | string | |
 | username | string, unique | |
-| email | string, unique | format email valid |
-| phone | string, nullable, unique | digunakan sebagai alternatif identifier transfer |
-| password | string (hashed) | min 8 karakter |
+| email | string, unique | |
+| phone | string, nullable, unique | |
+| password | string (hashed) | nullable (untuk user OTP) |
+| pin | string (hashed), nullable | PIN 6 digit untuk transaksi |
+| google_id | string, nullable | ID dari Google OAuth |
 | created_at / updated_at | timestamp | |
 
-### 6.3 Tabel `wallets`
+### Tabel `wallets`
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | id | bigint, PK | |
-| user_id | bigint, FK → users.id, unique | 1 user = 1 wallet |
-| balance | decimal(15,2), default 0 | tidak boleh minus (constraint di level aplikasi) |
+| user_id | bigint, FK, unique | 1 user = 1 wallet |
+| balance | decimal(15,2) | saldo saat ini |
 | created_at / updated_at | timestamp | |
 
-### 6.4 Tabel `transactions`
+### Tabel `transactions`
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | id | bigint, PK | |
-| transfer_code | uuid, nullable | menghubungkan pasangan baris debit-kredit pada transfer (null untuk top up) |
-| user_id | bigint, FK → users.id | pemilik baris ledger ini |
-| counterpart_user_id | bigint, FK → users.id, nullable | lawan transaksi (null untuk top up) |
-| type | enum(`TOPUP`, `TRANSFER_IN`, `TRANSFER_OUT`) | |
-| amount | decimal(15,2) | selalu positif, makna +/- ditentukan oleh `type` |
-| balance_after | decimal(15,2) | saldo setelah transaksi ini tercatat, untuk audit trail |
+| code | string(32), unique | TRX-YYYYMMDD-XXXXXX |
+| transfer_code | uuid, nullable | pengikat pasangan TRANSFER_OUT ↔ TRANSFER_IN |
+| user_id | bigint, FK | pemilik baris ledger |
+| counterpart_user_id | bigint, FK, nullable | lawan transaksi |
+| type | enum(TOPUP,TRANSFER_IN,TRANSFER_OUT) | |
+| status | enum(PENDING,SUCCESS,FAILED) | khusus TOPUP via Midtrans |
+| amount | decimal(15,2) | selalu positif |
+| balance_after | decimal(15,2), nullable | saldo setelah transaksi |
 | description | string, nullable | |
 | created_at / updated_at | timestamp | |
 
-> **Catatan desain:** pakai pola **ledger per baris** (bukan update saldo langsung tanpa jejak) supaya riwayat transaksi gampang ditarik tanpa join rumit, dan setiap baris self-explanatory untuk audit. Saat presentasi, ini poin bagus untuk dijelaskan ke mentor sebagai bentuk "clean architecture".
-
----
-
-## 7. Functional Requirements
-
-### 7.1 Authentication
-
-**Register**
-- Field: `name`, `username`, `email`, `phone` (opsional), `password`, `password_confirmation`
-- Validasi:
-  - `email`: format valid (reject `user@` tanpa domain), unique
-  - `username`: required, unique
-  - `password`: min 8 karakter
-- Sukses → buat `User` + `Wallet` (balance 0) dalam satu DB transaction, lalu kembalikan token/cookie session
-- Skenario invalid → 422 dengan pesan per-field
-
-**Login**
-- Field: `email` (atau `username`) + `password`
-- Sukses → balikan token Sanctum (atau set cookie httpOnly, lihat §16) + data user
-- Gagal kredensial → 401 Unauthorized, pesan generik (jangan bocorkan apakah email atau password yang salah, demi security)
-
-### 7.2 Wallet — Lihat Saldo
-`GET /api/wallet`
-- Wajib auth
-- Balikan saldo wallet milik user yang login saja (cek `wallet.user_id === auth()->id()`)
-
-### 7.3 Wallet — Top Up
-`POST /api/topup`
-- Field: `amount`
-- Validasi:
-  - Wajib angka (reject huruf/simbol) → "Nominal harus berupa angka."
-  - Tidak boleh kosong → "Nominal tidak boleh kosong."
-  - Tidak boleh negatif
-  - Wajib bilangan bulat (integer, reject desimal)
-  - Ada batas maksimum per transaksi (mis. konfigurasi `MAX_TRANSACTION_AMOUNT`, default disarankan 50.000.000) → "Nominal melebihi batas maksimum transaksi."
-- Proses: dalam `DB::transaction`, tambahkan `balance`, insert row `transactions` (type `TOPUP`)
-- Response sukses: saldo terbaru + data transaksi
-
-### 7.4 Wallet — Transfer
-`POST /api/transfer`
-- Field: `recipient` (email atau nomor HP), `amount`, `description` (opsional)
-- Validasi:
-  - Semua validasi nominal di §7.3 berlaku juga di sini
-  - `recipient` harus ditemukan di tabel users, dan **tidak boleh transfer ke diri sendiri**
-  - Saldo pengirim harus cukup (`balance >= amount`), kalau tidak → pesan jelas, mis. "Saldo tidak cukup."
-- Proses (atomic, dalam satu `DB::transaction`):
-  1. Lock baris wallet pengirim (`lockForUpdate`) untuk hindari race condition
-  2. Validasi ulang saldo di dalam transaction (defense in depth)
-  3. Kurangi saldo pengirim, insert `transactions` row (`TRANSFER_OUT`)
-  4. Tambah saldo penerima, insert `transactions` row (`TRANSFER_IN`), keduanya pakai `transfer_code` yang sama
-  5. Jika salah satu langkah gagal (exception) → seluruh transaction **rollback otomatis**, tidak ada data tersimpan
-- Response sukses: saldo terbaru pengirim + detail transaksi
-
-### 7.5 Wallet — Riwayat Transaksi
-`GET /api/transactions`
-- Wajib auth
-- Hanya menampilkan baris milik user yang login (`where user_id = auth()->id()`)
-- Disarankan: pagination (`?page=`), filter by tipe/tanggal (nice-to-have)
-- Response: list transaksi terurut terbaru → terlama
-
-### 7.6 Frontend Dashboard
-
-**Halaman Login**
-- Form email/username + password
-- Validasi client-side dasar sebelum submit (required, format email)
-- Tampilkan error dari API (401) dengan pesan ramah
-- Loading state saat submit (disable tombol, spinner)
-
-**Halaman Dashboard**
-- **Card Saldo**: tampil saldo real-time, refresh otomatis setelah top up/transfer sukses
-- **Tombol Top Up** → buka modal/form input nominal
-  - Validasi input nominal real-time (hanya angka, integer, tidak boleh kosong/negatif)
-  - Tombol submit **disabled** sampai input valid, dan disabled lagi selama request berjalan (cegah double-submit / spam klik)
-  - Tampilkan error spesifik dari API kalau gagal
-- **Form Transfer**: input `recipient` + `amount`
-  - Sama seperti top up: validasi real-time, loading state, error handling (mis. "Saldo tidak cukup" ditampilkan langsung di bawah field)
-- **Tabel Riwayat Transaksi**: kolom tanggal, tipe (masuk/keluar — beri warna beda), nominal, lawan transaksi, saldo setelah transaksi
-  - Loading skeleton saat fetch awal
-  - Empty state kalau belum ada transaksi
-
----
-
-## 8. API Specification
-
-| Method | Endpoint | Auth | Body | Sukses | Error |
-|---|---|---|---|---|---|
-| POST | `/api/register` | tidak | `name, username, email, phone?, password, password_confirmation` | 201 | 422 |
-| POST | `/api/login` | tidak | `email/username, password` | 200 + token/cookie | 401, 422 |
-| POST | `/api/logout` | ya | — | 200 | 401 |
-| GET | `/api/wallet` | ya | — | 200 | 401 |
-| POST | `/api/topup` | ya | `amount` | 200 | 400, 401, 422 |
-| POST | `/api/transfer` | ya | `recipient, amount, description?` | 200 | 400, 401, 422 |
-| GET | `/api/transactions` | ya | query: `page?` | 200 | 401 |
-
----
-
-## 9. Validation Rules — Detail Lengkap
-
-### 9.1 Auth
-| Field | Rule |
-|---|---|
-| email | `required, email, unique:users` (saat register) |
-| username | `required, unique:users` |
-| password | `required, min:8, confirmed` |
-
-### 9.2 Nominal (top up & transfer)
-| Skenario Input | Expected Response |
-|---|---|
-| Huruf (`abc`) | 422 — "Nominal harus berupa angka." |
-| Kosong (`""`) | 422 — "Nominal tidak boleh kosong." |
-| Mengandung simbol (`Rp100.000`, `100k`) | 422 — "Nominal harus berupa angka." |
-| Negatif (top up) | 422 — "Nominal tidak boleh negatif." |
-| Desimal (`100.5`) | 422 — "Nominal harus berupa bilangan bulat." |
-| Melebihi batas maksimum | 422 — "Nominal melebihi batas maksimum transaksi." |
-| Saldo tidak cukup (transfer) | 400 — "Saldo tidak cukup." |
-| Recipient tidak ditemukan | 404/422 — "Penerima tidak ditemukan." |
-| Transfer ke diri sendiri | 422 — "Tidak dapat transfer ke diri sendiri." |
-
-> Semua skenario invalid: **tidak ada perubahan apapun di database**, dan FE tidak boleh bisa submit tombol sebelum validasi client-side lolos.
-
----
-
-## 10. Error Handling Standard
-
-Format response error konsisten (mengikuti default Laravel `ValidationException` + custom exception handler):
-
-```json
-{
-  "message": "Nominal tidak boleh kosong.",
-  "errors": {
-    "amount": ["Nominal tidak boleh kosong."]
-  }
-}
-```
-
-| Status | Kapan dipakai |
-|---|---|
-| 400 Bad Request | Logic error yang bukan validasi format (mis. saldo tidak cukup) |
-| 401 Unauthorized | Token invalid/tidak ada, atau kredensial login salah |
-| 422 Unprocessable Entity | Validasi format input gagal (FormRequest) |
-
----
-
-## 11. Security Requirements
-
-- Semua endpoint wallet/transaksi **wajib** middleware `auth:sanctum`
-- Setiap query data wallet/transaksi **wajib** difilter `where user_id = auth()->id()` — user A tidak boleh bisa akses data user B (cegah lewat manipulasi ID di request)
-- Password di-hash (bcrypt, default Laravel)
-- Rate limiting disarankan di `/api/login` untuk cegah brute force (nice-to-have)
-- Gunakan `lockForUpdate()` saat baca saldo dalam transaction transfer, untuk cegah race condition dua transfer bersamaan
-
----
-
-## 12. Non-Functional Requirements
-
-- **Konsistensi data**: tidak boleh ada kondisi saldo terpotong tapi gagal masuk ke penerima (atomic transaction)
-- **Performance**: query list transaksi pakai index pada `user_id` dan `created_at`
-- **Code readability**: ikut struktur Laravel standar — Controller tipis, logic bisnis di Service/Action class, validasi di FormRequest
-- **Testability**: disarankan ada minimal beberapa test (unit/feature) untuk transfer (sukses, saldo kurang, rollback)
-
----
-
-## 13. UI/UX Flow (ringkas)
-
-```
-[Login Page] --sukses--> [Dashboard]
-                            ├── Card Saldo (auto refresh)
-                            ├── Tombol "Top Up" → Modal Input Nominal → Submit (loading) → Toast sukses/gagal → refresh saldo
-                            ├── Form Transfer (recipient + nominal) → Submit (loading) → Toast sukses/gagal → refresh saldo + tabel
-                            └── Tabel Riwayat Transaksi (paginated)
-```
-
----
-
-## 14. Acceptance Criteria (mapping ke Rubrik Penilaian)
-
-| Kategori Rubrik | Acceptance Criteria |
-|---|---|
-| Code Readability (15) | Struktur folder rapi, naming konsisten, tidak ada logic bisnis di Controller |
-| Code Effectivity (5) | Query tidak N+1, pakai eager loading bila perlu, index di kolom yang sering di-query |
-| FE: Login & Dashboard (10) | Kedua halaman berfungsi penuh, responsif |
-| API Integration (10) | FE terhubung benar ke semua endpoint, error API tertangani di UI |
-| FE Requirement (15) | Loading state, validasi real-time, error message spesifik semua terpenuhi |
-| BE: Authentication (10) | Register/login sesuai semua skenario invalid di requirement |
-| BE: Wallet API (10) | 4 endpoint wallet semua berjalan sesuai spec |
-| BE Requirement (15) | DB transaction + rollback teruji, validasi ketat semua skenario, middleware auth aktif |
-| Presentation (10) | Bisa jelaskan alur & keputusan teknis secara verbal tanpa membaca script |
-
----
-
-## 15. Timeline Pengerjaan (vs deadline 27 Juni 2026, 23.50 WIB)
-
-| Hari | Tanggal | Fokus |
+### Tabel `vouchers`
+| Kolom | Tipe | Keterangan |
 |---|---|---|
-| 1 | 21 Jun | Setup project (Laravel + React), desain ERD, migration & model |
-| 2 | 22 Jun | Auth: register + login + semua skenario validasi invalid |
-| 3 | 23 Jun | Wallet: GET saldo + top up (dengan DB transaction) |
-| 4 | 24 Jun | Transfer (atomic + rollback) + riwayat transaksi + security check (user A vs B) |
-| 5 | 25 Jun | FE: Login page + Dashboard skeleton + integrasi API saldo |
-| 6 | 26 Jun | FE: Form top up & transfer + error handling + loading state + polish |
-| 7 | 27 Jun | Testing end-to-end, deploy, README, Postman collection, susun slide, submit sebelum 23.50 WIB |
+| id | bigint, PK | |
+| code | string(32), unique | kode redeem |
+| value | decimal(15,2) | nominal saldo |
+| max_uses | integer, nullable | kuota global (null = tak terbatas) |
+| max_uses_per_user | integer, default 1 | |
+| expires_at | timestamp, nullable | |
+| is_active | boolean | |
+| description | string, nullable | |
 
-> Setelah submit, sisa waktu sebelum presentasi (H+7) dipakai untuk latihan menjelaskan arsitektur secara lisan — bukan baca slide.
-
----
-
-## 16. Assumptions & Open Decisions
-
-Beberapa hal di bawah ini masih perlu dikonfirmasi/diputuskan — PRD ini akan disesuaikan begitu diputuskan:
-
-1. **Starting point project** — asumsi sementara: mulai dari nol (belum ada boilerplate). *(belum dikonfirmasi)*
-2. **React tooling** — asumsi: React + Vite (lebih ringan & cepat dibanding Next.js untuk SPA sederhana seperti ini). *(belum dikonfirmasi)*
-3. **Strategi token auth** — asumsi: httpOnly cookie (sesuai rekomendasi bonus di guideline). Kalau waktu terbatas, fallback ke Bearer token di localStorage (lebih cepat implementasi, tapi tidak dapat poin bonus). *(belum dikonfirmasi)*
-4. **Batas maksimum nominal transaksi** — disarankan default Rp 50.000.000 per transaksi, bisa diubah sesuai kebutuhan.
-5. **Identifier transfer** — asumsi: bisa pakai email **atau** nomor HP (sesuai requirement "berdasarkan email/nomor HP").
+### Tabel `user_voucher` (pivot)
+| Kolom | Tipe |
+|---|---|
+| user_id | bigint, FK |
+| voucher_id | bigint, FK |
+| used_at | timestamp |
 
 ---
 
-## 17. Out of Scope / Nice-to-have (kalau waktu lebih)
+## 6. API Endpoints
 
-- Rate limiting login
-- Export riwayat transaksi ke PDF/CSV
-- Notifikasi real-time (WebSocket) saat menerima transfer
-- Dark mode dashboard
-- Unit/feature test coverage lebih lengkap
+| Method | Endpoint | Auth | Deskripsi |
+|---|---|---|---|
+| POST | `/api/register` | ✗ | Daftar akun baru |
+| POST | `/api/login` | ✗ | Login email/username + password |
+| POST | `/api/login/request-otp` | ✗ | Minta OTP WhatsApp |
+| POST | `/api/verify-otp` | ✗ | Verifikasi OTP |
+| GET | `/api/auth/google/redirect` | ✗ | Redirect ke Google OAuth |
+| GET | `/api/auth/google/callback` | ✗ | Callback Google OAuth |
+| POST | `/api/logout` | ✓ | Hapus sesi |
+| GET | `/api/me` | ✓ | Data user saat ini |
+| PUT | `/api/me` | ✓ | Update profil |
+| POST | `/api/pin` | ✓ | Atur/Ubah PIN |
+| GET | `/api/wallet` | ✓ | Cek saldo |
+| POST | `/api/topup` | ✓ | Top up saldo (direct atau Midtrans) |
+| POST | `/api/topup/confirm` | ✓ | Konfirmasi status Midtrans |
+| POST | `/api/transfer` | ✓ | Transfer ke user lain |
+| POST | `/api/pay` | ✓ | Bayar tagihan |
+| GET | `/api/transactions` | ✓ | Riwayat transaksi |
+| GET | `/api/promos` | ✓ | Daftar promo aktif |
+| POST | `/api/vouchers/redeem` | ✓ | Redeem kode voucher |
+| POST | `/webhooks/midtrans` | ✗ | Webhook Midtrans |
+
+**Catatan:** Semua endpoint yang dilindungi auth menggunakan middleware `auth:sanctum`.
+
+---
+
+## 7. Alur Transaksi
+
+### Top Up
+1. User input nominal → `POST /topup`
+2. Jika `DIRECT_TOPUP_ENABLED=true` → saldo langsung bertambah (mode demo)
+3. Jika tidak → inisialisasi Midtrans Snap → popup pembayaran → konfirmasi status
+
+### Transfer
+1. User input penerima + nominal + PIN → `POST /transfer`
+2. Backend lock wallet sender → validasi saldo → debit sender → kredit recipient
+3. Semua dalam satu DB transaction (atomic rollback)
+4. Jika eligible → cashback otomatis masuk ke sender
+
+### Redeem Voucher
+1. User input kode → `POST /vouchers/redeem`
+2. Validasi: kode ada, aktif, belum expired, kuota tersisa, belum dipakai user
+3. Saldo bertambah + catat transaksi TOPUP + tandai pivot
+
+---
+
+## 8. Cara Menjalankan
+
+```bash
+# Backend
+cd backend
+composer install
+cp .env.example .env   # lalu edit konfigurasi database & Midtrans
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+php artisan serve
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+### Voucher Demo (Seeder)
+| Kode | Nilai | Kuota |
+|---|---|---|
+| WELCOME10 | Rp 10.000 | 100 |
+| RAMADHAN25 | Rp 25.000 | 50 |
+| BONUS50 | Rp 50.000 | 20 |
+| FREEBAL | Rp 15.000 | ∞ |
+
+---
+
+## 9. Validasi Input
+
+### Nominal (top up, transfer, pay)
+| Skenario | Respon |
+|---|---|
+| Kosong | 422 — "Nominal tidak boleh kosong." |
+| Huruf/simbol | 422 — "Nominal harus berupa angka." |
+| Negatif | 422 — "Nominal tidak boleh negatif." |
+| Desimal | 422 — "Nominal harus berupa bilangan bulat." |
+| Melebihi batas | 422 — "Nominal melebihi batas maksimum transaksi." |
+| Saldo tidak cukup | 400 — "Saldo tidak cukup." |
+
+### Transfer
+| Skenario | Respon |
+|---|---|
+| Penerima tidak ditemukan | 422 — "Penerima tidak ditemukan." |
+| Transfer ke diri sendiri | 422 — "Tidak dapat transfer ke diri sendiri." |
+| PIN salah | 422 — "PIN salah." |
+| PIN belum diatur | 403 — "Atur PIN transaksi terlebih dahulu." |
+
+### Voucher
+| Skenario | Respon |
+|---|---|
+| Kode tidak ditemukan | 404 — "Kode voucher tidak ditemukan." |
+| Voucher tidak aktif | 400 — "Voucher sudah tidak aktif." |
+| Voucher kedaluwarsa | 400 — "Voucher sudah kedaluwarsa." |
+| Kuota habis | 400 — "Kuota voucher sudah habis." |
+| Sudah pernah pakai | 400 — "Kamu sudah pernah menggunakan voucher ini." |
+
+---
+
+## 10. Arsitektur Keamanan
+
+- **Sanctum Token**: semua endpoint mutasi dilindungi `auth:sanctum`
+- **Row-level locking**: `lockForUpdate()` pada wallet saat transfer mencegah race condition
+- **Atomic transaction**: semua transaksi keuangan dalam `DB::transaction` — rollback otomatis jika ada kegagalan
+- **PIN transaksi**: setiap transfer/pay wajib verifikasi PIN 6 digit (bcrypt)
+- **Authorization**: user hanya bisa akses data milik sendiri (`where user_id = auth()->id()`)
+- **Token di cookie**: token disimpan di cookie (SameSite=Strict) bukan localStorage, lebih aman dari XSS
+
+---
+
+## 11. Rubrik Penilaian
+
+| Kategori | Bobot |
+|---|---|
+| Code Readability | 15 |
+| Code Effectivity (N+1, indexing) | 5 |
+| FE: Login & Dashboard | 10 |
+| API Integration (FE ↔ BE) | 10 |
+| FE Requirement (loading, validasi, error) | 15 |
+| BE: Authentication | 10 |
+| BE: Wallet API | 10 |
+| BE Requirement (DB transaction, validasi, middleware) | 15 |
+| Presentation | 10 |
+| **Total** | **100** |
+
+---
+
+## 12. Daftar File Penting
+
+### Backend (`backend/`)
+```
+app/Http/Controllers/
+├── AuthController.php        # Register, Login, Logout, OTP
+├── WalletController.php      # Wallet, TopUp, Transfer, Pay, Promo, Voucher
+├── ProfileController.php     # Update profil, PIN
+├── SocialAuthController.php  # Google OAuth
+├── MidtransWebhookController.php
+
+app/Services/
+├── WalletService.php          # Logic bisnis wallet + cashback
+├── OtpService.php             # Logic OTP WhatsApp
+
+app/Models/
+├── User.php
+├── Wallet.php
+├── Transaction.php
+├── Voucher.php
+
+app/Http/Requests/
+├── TopUpRequest.php
+├── TransferRequest.php
+├── RegisterRequest.php
+├── LoginRequest.php
+
+config/
+├── wallet.php                 # Config: max amount, direct topup, promos
+├── midtrans.php               # Config Midtrans
+
+database/migrations/           # 11 file migrasi
+database/seeders/
+├── DatabaseSeeder.php         # Seed users + vouchers
+
+routes/api.php                 # Semua routing API
+```
+
+### Frontend (`frontend/`)
+```
+src/
+├── pages/
+│   ├── Dashboard.jsx          # Halaman utama (saldo, transaksi, promo, modal)
+│   ├── Landing.jsx            # Halaman depan
+│   ├── Login.jsx              # Login
+│   ├── Register.jsx           # Register
+│   ├── Profile.jsx            # Profil & PIN
+│   └── AuthCallback.jsx       # Callback Google OAuth
+
+├── components/
+│   ├── TopUpModal.jsx         # Modal top up saldo
+│   ├── TransferModal.jsx      # Modal transfer
+│   ├── PayModal.jsx           # Modal bayar tagihan
+│   ├── ScanQRModal.jsx        # Scan QRIS via kamera
+│   ├── ReceiveQRModal.jsx     # Generate QR untuk terima
+│   ├── PinModal.jsx           # Verifikasi PIN
+│   ├── PinSetupModal.jsx      # Atur PIN
+│   ├── ReceiptModal.jsx       # Bukti transaksi
+│   ├── VoucherModal.jsx       # Redeem voucher
+│   └── ...
+
+├── hooks/
+│   ├── useAuth.js             # Hook autentikasi
+│   └── useWallet.js           # Hook wallet (saldo, transaksi)
+
+├── lib/
+│   ├── api.js                 # HTTP client wrapper
+│   ├── auth.js                # Manajemen token & sesi
+│   ├── wallet.js              # Format, validasi, filter
+│   └── theme.js               # Design tokens Black + Gold
+```

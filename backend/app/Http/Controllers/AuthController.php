@@ -160,16 +160,11 @@ class AuthController extends Controller
 
     // ---- helper privat ----
 
-    // Bentuk data user yang aman dikirim ke frontend (TANPA password/token).
+    // Bentuk data user yang aman dikirim ke frontend (TANPA password/pin/token).
+    // Delegasi ke User::toApiArray() supaya formatnya konsisten di semua controller.
     private function formatUser(User $user): array
     {
-        return [
-            'id'       => $user->id,
-            'name'     => $user->name,
-            'username' => '@' . $user->username,
-            'email'    => $user->email,
-            'phone'    => $user->phone,
-        ];
+        return $user->toApiArray();
     }
 
     private function deliveryFailed(): JsonResponse

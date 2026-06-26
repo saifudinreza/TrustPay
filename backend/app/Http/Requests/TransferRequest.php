@@ -27,6 +27,7 @@ class TransferRequest extends FormRequest
             'recipient'   => ['required', 'string'],                               // email / nomor HP / username
             'amount'      => ['required', 'numeric', 'integer', 'min:1', "max:{$max}"],
             'description' => ['nullable', 'string', 'max:255'],                    // catatan opsional
+            'pin'         => ['required', 'string', 'digits:6'],                   // PIN keamanan transaksi
         ];
     }
 
@@ -39,6 +40,8 @@ class TransferRequest extends FormRequest
             'amount.integer'     => 'Nominal harus berupa bilangan bulat.',
             'amount.min'         => 'Nominal tidak boleh negatif.',
             'amount.max'         => 'Nominal melebihi batas maksimum transaksi.',
+            'pin.required'       => 'PIN transaksi wajib diisi.',
+            'pin.digits'         => 'PIN harus 6 angka.',
         ];
     }
 }

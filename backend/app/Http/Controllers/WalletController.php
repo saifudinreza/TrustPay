@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\TopUpRequest;
 use App\Http\Requests\TransferRequest;
 use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Voucher;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * WalletController — endpoint saldo, top up, transfer, dan riwayat transaksi.
@@ -32,13 +35,22 @@ class WalletController extends Controller
     }
 
     /**
-     * POST /topup — inisialisasi top up via Midtrans Snap.
-     * TopUpRequest memvalidasi `amount` (angka bulat, > 0, ≤ maks konfigurasi).
-     * Respons: snap_token + redirect_url untuk membuka Midtrans Snap UI di frontend.
+     * POST /topup — inisialisasi top up.
+     * Jika DIRECT_TOPUP_ENABLED=true, langsung tambah saldo (tanpa Midtrans).
+     * Jika false, buat transaksi PENDING + Snap token Midtrans.
      */
     public function topup(TopUpRequest $request): JsonResponse
     {
         $result = $this->walletService->topUp($request->user(), (int) $request->amount);
+
+        if (!empty($result['direct'])) {
+            return response()->json([
+                'message'     => 'Top up berhasil.',
+                'direct'      => true,
+                'wallet'      => ['balance' => (float) $result['wallet']->balance],
+                'transaction' => $this->formatTx($result['transaction']),
+            ]);
+        }
 
         return response()->json([
             'message'      => 'Top up diinisialisasi.',
@@ -82,6 +94,9 @@ class WalletController extends Controller
     public function transfer(TransferRequest $request): JsonResponse
     {
         try {
+            // Lapisan keamanan: setiap transfer wajib lolos verifikasi PIN user.
+            $this->assertPin($request->user(), $request->input('pin'));
+
             $result = $this->walletService->transfer(
                 $request->user(),
                 $request->recipient,
@@ -111,9 +126,16 @@ class WalletController extends Controller
         $data = $request->validate([
             'amount'      => ['required', 'integer', 'min:1000', 'max:10000000'],
             'description' => ['nullable', 'string', 'max:200'],
+            'pin'         => ['required', 'string', 'digits:6'],
+        ], [
+            'pin.required' => 'PIN transaksi wajib diisi.',
+            'pin.digits'   => 'PIN harus 6 angka.',
         ]);
 
         try {
+            // Lapisan keamanan: pembayaran tagihan juga wajib lolos verifikasi PIN.
+            $this->assertPin($request->user(), $request->input('pin'));
+
             $result = $this->walletService->pay(
                 $request->user(),
                 (int) $data['amount'],
@@ -127,6 +149,59 @@ class WalletController extends Controller
             ]);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+        }
+    }
+
+    /**
+     * GET /promos — daftar promo & cashback aktif.
+     */
+    public function promos(): JsonResponse
+    {
+        return response()->json(['data' => config('wallet.promos', [])]);
+    }
+
+    /**
+     * POST /vouchers/redeem — redeem kode voucher.
+     */
+    public function redeemVoucher(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'code' => 'required|string|max:32',
+        ]);
+
+        $voucher = Voucher::where('code', strtoupper($data['code']))->first();
+
+        if (! $voucher) {
+            return response()->json(['message' => 'Kode voucher tidak ditemukan.'], 404);
+        }
+
+        if (! $voucher->is_active) {
+            return response()->json(['message' => 'Voucher sudah tidak aktif.'], 400);
+        }
+
+        if ($voucher->expires_at && $voucher->expires_at->isPast()) {
+            return response()->json(['message' => 'Voucher sudah kedaluwarsa.'], 400);
+        }
+
+        if ($voucher->max_uses && $voucher->users()->count() >= $voucher->max_uses) {
+            return response()->json(['message' => 'Kuota voucher sudah habis.'], 400);
+        }
+
+        $user = $request->user();
+        $usedCount = $voucher->users()->where('user_id', $user->id)->count();
+        if ($usedCount >= $voucher->max_uses_per_user) {
+            return response()->json(['message' => 'Kamu sudah pernah menggunakan voucher ini.'], 400);
+        }
+
+        try {
+            $result = $this->walletService->redeemVoucher($user, $voucher);
+            return response()->json([
+                'message'     => 'Voucher berhasil diredeem!',
+                'wallet'      => ['balance' => (float) $result['wallet']->balance],
+                'transaction' => $this->formatTx($result['transaction']),
+            ]);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 500);
         }
     }
 
@@ -145,6 +220,25 @@ class WalletController extends Controller
         return response()->json([
             'data' => $txs->map(fn (Transaction $tx) => $this->formatTx($tx))->values()->all(),
         ]);
+    }
+
+    /**
+     * Verifikasi PIN transaksi user sebelum mutasi saldo keluar.
+     *
+     * - Belum punya PIN  → 403, frontend mengarahkan user ke pengaturan PIN.
+     * - PIN salah/kosong → 422, frontend menampilkan pesan & minta ketik ulang.
+     *
+     * Dilempar sebagai DomainException agar ditangkap blok catch di transfer()/pay().
+     */
+    private function assertPin(User $user, ?string $pin): void
+    {
+        if (is_null($user->pin)) {
+            throw new \DomainException('Atur PIN transaksi terlebih dahulu di halaman profil.', 403);
+        }
+
+        if (! $pin || ! Hash::check($pin, $user->pin)) {
+            throw new \DomainException('PIN salah.', 422);
+        }
     }
 
     /**

@@ -26,8 +26,8 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * Trait HasApiTokens memungkinkan `$user->createToken(...)` dari Sanctum.
  */
-#[Fillable(['name', 'username', 'email', 'phone', 'password', 'google_id'])]
-#[Hidden(['password', 'remember_token'])] // JANGAN pernah kirim password/token ke frontend
+#[Fillable(['name', 'username', 'email', 'phone', 'password', 'pin', 'google_id'])]
+#[Hidden(['password', 'pin', 'remember_token'])] // JANGAN pernah kirim password/pin/token ke frontend
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -43,6 +43,25 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'pin' => 'hashed', // PIN otomatis di-hash saat diisi, sama seperti password
+        ];
+    }
+
+    /**
+     * Bentuk data user yang aman dikirim ke frontend (TANPA password/pin/token).
+     * Dipakai oleh AuthController & ProfileController agar formatnya konsisten.
+     *  - username selalu diberi prefix '@'
+     *  - has_pin → frontend tahu apakah user perlu mengatur PIN dulu sebelum transaksi
+     */
+    public function toApiArray(): array
+    {
+        return [
+            'id'       => $this->id,
+            'name'     => $this->name,
+            'username' => '@' . $this->username,
+            'email'    => $this->email,
+            'phone'    => $this->phone,
+            'has_pin'  => ! is_null($this->pin),
         ];
     }
 

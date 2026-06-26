@@ -13,26 +13,7 @@ export const MONTHS = [
   'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
 ]
 
-// Direktori kontak simulasi — dipakai oleh recipientStatus() di TransferModal.
-// Dalam produksi, pencarian penerima dilakukan di backend via email/username/HP.
-export const DIRECTORY = {
-  budi: 'Budi S.',
-  siti: 'Siti A.',
-  reza: 'Saifudin R.',
-  dewi: 'Dewi K.',
-  rina: 'Rina W.',
-}
-
-// Username yang dianggap "diri sendiri" — untuk validasi transfer ke diri sendiri
-export const SELF = ['aldi', '@aldi', 'saya', '@saya']
-
-// Data user demo statis (dipakai oleh ReceiveQRModal sebagai fallback sebelum API load)
-export const ME = {
-  name: 'Aldi P.',
-  username: '@aldi',
-  account: '8021 4455 4021',
-  phone: '0812-3344-4021',
-}
+export const SELF = ['saya', '@saya']
 
 // ---- format angka & tanggal ----
 
@@ -52,41 +33,6 @@ export const fmtTime = (d) =>
 /** Format tanggal "21 Jun 2026" dari objek Date */
 export const fmtDate = (d) =>
   d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear()
-
-/**
- * Generate kode transaksi unik, format TRX-YYYYMMDD-XXXX.
- * Dipakai di sisi frontend untuk data lokal/simulasi; backend punya generateCode() sendiri.
- */
-export function genCode(ts = Date.now()) {
-  const d = new Date(ts)
-  const ymd =
-    d.getFullYear().toString() +
-    String(d.getMonth() + 1).padStart(2, '0') +
-    String(d.getDate()).padStart(2, '0')
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase()
-  return `TRX-${ymd}-${rand}`
-}
-
-/**
- * Buat objek transaksi ternormalisasi (dipakai untuk data seed/simulasi lokal).
- * Transaksi nyata dari API sudah diformat oleh normalizeTx() di useWallet.js.
- */
-export function makeTransaction({ type, amount, counterparty, balanceAfter, description = '', ts = Date.now() }) {
-  const d = new Date(ts)
-  const signed = type === 'KELUAR' ? -Math.abs(amount) : Math.abs(amount)
-  return {
-    id: ts,
-    code: genCode(ts),
-    ts,
-    dateStr: fmtDate(d),
-    timeStr: fmtTime(d),
-    type,
-    counterparty: counterparty || '—',
-    amount: signed,
-    balanceAfter,
-    description,
-  }
-}
 
 // ---- validasi nominal (sisi klien, mirror aturan backend) ----
 
@@ -108,37 +54,7 @@ export function validateNominal(raw) {
   return { n }
 }
 
-/**
- * Cek status penerima transfer di direktori lokal (simulasi).
- * Untuk transfer nyata, validasi penerima ada di backend (WalletService.transfer).
- */
-export function recipientStatus(raw) {
-  const v = (raw || '').trim().toLowerCase().replace(/^@/, '')
-  if (v === '') return { status: 'empty' }
-  if (SELF.includes(v) || SELF.includes('@' + v)) return { status: 'self' }
-  const name = DIRECTORY[v]
-  if (name) return { status: 'found', name }
-  return { status: 'notfound' }
-}
 
-// ---- data seed (tampilan awal sebelum ada transaksi nyata) ----
-
-/** Helper untuk timestamp seed yang presisi */
-function seedTs(y, mo, d, h, mi) {
-  return new Date(y, mo, d, h, mi).getTime()
-}
-
-/** Transaksi contoh yang ditampilkan di Dashboard saat riwayat masih kosong */
-export const SEED_TRANSACTIONS = [
-  makeTransaction({ type: 'MASUK', amount: 500000, counterparty: 'dari Budi S.', balanceAfter: 2450000, ts: seedTs(2026, 5, 21, 9, 12), description: 'Transfer masuk' }),
-  makeTransaction({ type: 'KELUAR', amount: 150000, counterparty: 'ke Siti A.', balanceAfter: 1950000, ts: seedTs(2026, 5, 20, 14, 30), description: 'bayar makan siang' }),
-  makeTransaction({ type: 'TOPUP', amount: 1000000, counterparty: '—', balanceAfter: 2100000, ts: seedTs(2026, 5, 18, 8, 0), description: 'Top up saldo' }),
-  makeTransaction({ type: 'KELUAR', amount: 75000, counterparty: 'ke Reza P.', balanceAfter: 1100000, ts: seedTs(2026, 5, 15, 19, 45), description: 'patungan' }),
-  makeTransaction({ type: 'MASUK', amount: 300000, counterparty: 'dari Dewi K.', balanceAfter: 1175000, ts: seedTs(2026, 5, 12, 10, 20), description: 'Transfer masuk' }),
-  makeTransaction({ type: 'TOPUP', amount: 500000, counterparty: '—', balanceAfter: 875000, ts: seedTs(2026, 5, 10, 16, 5), description: 'Top up saldo' }),
-]
-
-export const SEED_BALANCE = 2450000
 
 // ---- row meta (warna & label untuk tiap baris riwayat) ----
 
@@ -151,12 +67,12 @@ export function rowMeta(t) {
   const isPending = t.status === 'PENDING'
   const isFailed = t.status === 'FAILED'
 
-  // Warna rail kiri: emas = topup, hijau = masuk, merah = keluar; abu = pending
-  let accent = t.type === 'TOPUP' ? '#BEF264' : masuk ? '#2F6F4E' : '#7A3142'
+  // Warna rail kiri (tema Black + Gold): gold = topup/masuk, amber = keluar
+  let accent = t.type === 'TOPUP' ? '#F5CE53' : masuk ? '#F5CE53' : '#C9952B'
   if (isPending) {
-    accent = '#7B8890'
+    accent = '#9C90B4'
   } else if (isFailed) {
-    accent = '#7A3142'
+    accent = '#C9952B'
   }
 
   let typeLabel = t.type === 'TOPUP' ? 'Top Up' : masuk ? 'Masuk' : 'Keluar'

@@ -3,20 +3,23 @@
 @tailwind utilities;
 
 :root {
-  /* Carbon + Lime palette */
-  --ink: #17191d;          /* carbon — text & dark surfaces */
-  --carbon-2: #2c2f35;     /* lighter carbon (gradient top) */
-  --carbon-3: #0c0e11;     /* deepest carbon (gradient bottom) */
-  --paper: #eff1ec;        /* light page base */
-  --lime: #bef264;         /* bright lime — fills, on-dark accents */
-  --lime-ink: #4d7c0f;     /* deep lime — accent text on light */
-  --stamp: #4d7c0f;        /* legacy alias → deep lime */
-  --masuk: #2f6f4e;
-  --keluar: #7a3142;
-  --tepi: #5c6b73;
+  /* Black + Gold palette (dark mode, luxury) */
+  --bg: #0b0a07;           /* app base — near-black warm */
+  --surface: #18150f;      /* card surface */
+  --surface-2: #201c14;    /* elevated / inputs */
+  --ink: #f7f3ea;          /* primary text on dark */
+  --ink-soft: #dad3c3;
+  --muted: #a99f89;        /* readable muted labels */
+  --gold: #e6b84c;         /* primary accent */
+  --gold-bright: #f5ce53;
+  --gold-deep: #c9952b;
+  --stamp: #f5ce53;        /* focus ring */
+  --masuk: #5bc98c;
+  --keluar: #f0625d;
+  --tepi: #a99f89;
   --r-card: 16px;
-  --r-input: 10px;
-  --r-button: 10px;
+  --r-input: 12px;
+  --r-button: 12px;
 }
 
 html {
@@ -122,8 +125,8 @@ body {
 }
 
 body {
-  background: #eff1ec;
-  color: #17191d;
+  background: #0b0a07;
+  color: #f7f3ea;
   font-family: 'Plus Jakarta Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -225,16 +228,16 @@ input:focus-visible {
 
 /* ===== hover states (ported from design `style-hover`) ===== */
 .nav-cta:hover {
-  background: #17191d;
-  color: #eff1ec !important;
+  background: var(--gold);
+  color: #1b1407 !important;
 }
 .cta-gold:hover {
-  background: #A6E03A;
+  background: #F0C64A;
   transform: translateY(-1px);
 }
 .cta-ghost:hover {
-  border-color: #17191d;
-  background: rgba(17, 32, 61, 0.04);
+  border-color: var(--gold);
+  background: rgba(230,184,76, 0.10);
 }
 
 /* ===== responsive: Landing ===== */
@@ -296,8 +299,8 @@ input:focus-visible {
   transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 }
 .qa-btn:hover {
-  background: rgba(17, 32, 61, 0.04) !important;
-  border-color: rgba(17, 32, 61, 0.08) !important;
+  background: rgba(230,184,76, 0.10) !important;
+  border-color: rgba(230,184,76, 0.22) !important;
   transform: translateY(-2px);
 }
 .qa-btn:active {
@@ -307,13 +310,13 @@ input:focus-visible {
   transition: background 0.14s ease;
 }
 .ledger-row:hover {
-  background: #fafbf7;
+  background: rgba(230,184,76, 0.07);
 }
 
 /* ===== wallet "buku tabungan" card ===== */
 .wallet-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 32px 60px -20px rgba(17, 32, 61, 0.68);
+  box-shadow: 0 32px 60px -18px rgba(201,149,43, 0.55);
 }
 .wallet-sheen {
   transform: translateX(-120%);
@@ -344,9 +347,9 @@ input:focus-visible {
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 .icon-btn:hover {
-  color: #7a3142 !important;
-  border-color: rgba(122, 49, 66, 0.4) !important;
-  background: rgba(122, 49, 66, 0.06) !important;
+  color: #fb7185 !important;
+  border-color: rgba(251, 113, 133, 0.4) !important;
+  background: rgba(251, 113, 133, 0.10) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -429,7 +432,7 @@ input:focus-visible {
 }
 
 /* =====================================================================
-   LANDING — parallax, reveal-on-scroll & ambient motion (carbon + lime)
+   LANDING — parallax, reveal-on-scroll & ambient motion (black + gold)
    ===================================================================== */
 
 /* reveal-on-scroll: elements start hidden, .in-view (toggled by observer) reveals */
@@ -462,7 +465,7 @@ input:focus-visible {
   translate: 0 var(--py, 0px);
 }
 
-/* ambient lime / carbon blobs floating behind the hero */
+/* ambient gold blobs floating behind the hero */
 .blob {
   position: absolute;
   border-radius: 50%;
@@ -470,11 +473,11 @@ input:focus-visible {
   pointer-events: none;
   z-index: 0;
 }
-.blob-lime {
-  background: radial-gradient(circle, rgba(190, 242, 100, 0.55), transparent 70%);
+.blob-gold {
+  background: radial-gradient(circle, rgba(245,206,83, 0.5), transparent 70%);
 }
 .blob-carbon {
-  background: radial-gradient(circle, rgba(23, 25, 29, 0.35), transparent 70%);
+  background: radial-gradient(circle, rgba(156,122,30, 0.45), transparent 70%);
 }
 @keyframes blobDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -482,9 +485,9 @@ input:focus-visible {
 }
 .blob-anim { animation: blobDrift 14s ease-in-out infinite; }
 
-/* lime gradient text accent */
-.lime-grad {
-  background: linear-gradient(100deg, #4d7c0f 0%, #7bb318 45%, #bef264 100%);
+/* gold gradient text accent */
+.gold-grad {
+  background: linear-gradient(100deg, #C9952B 0%, #F5CE53 45%, #E6B84C 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -502,12 +505,12 @@ input:focus-visible {
   bottom: -3px;
   height: 2px;
   width: 100%;
-  background: #bef264;
+  background: #F5CE53;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.ul-link:hover { color: #17191d; }
+.ul-link:hover { color: #f7f3ea; }
 .ul-link:hover::after { transform: scaleX(1); }
 
 /* feature card lift on hover */
@@ -517,8 +520,8 @@ input:focus-visible {
 }
 .feat-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 36px 60px -30px rgba(23, 25, 29, 0.42);
-  border-color: rgba(190, 242, 100, 0.55);
+  box-shadow: 0 36px 60px -28px rgba(201,149,43, 0.45);
+  border-color: rgba(245,206,83, 0.55);
 }
 
 /* marquee trustband (infinite scroll strip) */
@@ -546,26 +549,26 @@ input:focus-visible {
   width: 100%;
   transform-origin: left;
   transform: scaleX(var(--p, 0));
-  background: linear-gradient(90deg, #4d7c0f, #bef264);
+  background: linear-gradient(90deg, #C9952B, #F5CE53);
   z-index: 60;
 }
 
-/* primary CTA: animated lime sheen */
-.cta-lime {
+/* primary CTA: animated gold sheen */
+.cta-gold-btn {
   position: relative;
   overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.cta-lime:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -12px rgba(190, 242, 100, 0.6); }
-.cta-lime:active { transform: scale(0.97); }
-.cta-lime::before {
+.cta-gold-btn:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -12px rgba(245,206,83, 0.6); }
+.cta-gold-btn:active { transform: scale(0.97); }
+.cta-gold-btn::before {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
   transform: translateX(-130%);
 }
-.cta-lime:hover::before { animation: sheenSweep 0.85s ease; }
+.cta-gold-btn:hover::before { animation: sheenSweep 0.85s ease; }
 
 /* respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
@@ -578,7 +581,7 @@ input:focus-visible {
   .parallax { translate: none !important; }
   .blob-anim,
   .marquee { animation: none !important; }
-  .cta-lime:hover::before { animation: none !important; }
+  .cta-gold-btn:hover::before { animation: none !important; }
 }
 
 /* ===== responsive: new landing sections ===== */
@@ -639,5 +642,5 @@ input:focus-visible {
 }
 .promo-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 20px 40px -18px rgba(23,25,29,0.35);
+  box-shadow: 0 20px 40px -16px rgba(201,149,43,0.4);
 }

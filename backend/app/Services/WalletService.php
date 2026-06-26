@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Voucher;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,8 +13,46 @@ use Midtrans\Snap;
 
 class WalletService
 {
-    // Top up: initialize transaction row + generate Midtrans Snap Token. Atomic via DB transaction.
+    // Top up: support direct mode (tanpa Midtrans) dan normal (via Midtrans Snap).
     public function topUp(User $user, int $amount): array
+    {
+        if (config('wallet.direct_topup_enabled')) {
+            return $this->directTopUp($user, $amount);
+        }
+
+        return $this->midtransTopUp($user, $amount);
+    }
+
+    // Direct top up: langsung tambah saldo tanpa payment gateway (untuk demo).
+    private function directTopUp(User $user, int $amount): array
+    {
+        return DB::transaction(function () use ($user, $amount) {
+            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+            $wallet->balance = bcadd((string) $wallet->balance, (string) $amount, 2);
+            $wallet->save();
+
+            $tx = Transaction::create([
+                'code'          => $this->generateCode(),
+                'user_id'       => $user->id,
+                'type'          => 'TOPUP',
+                'status'        => 'SUCCESS',
+                'amount'        => $amount,
+                'balance_after' => $wallet->balance,
+                'description'   => 'Top up saldo',
+            ]);
+
+            return [
+                'transaction'  => $tx,
+                'snap_token'   => null,
+                'redirect_url' => null,
+                'direct'       => true,
+                'wallet'       => $wallet,
+            ];
+        });
+    }
+
+    // Midtrans top up: buat transaksi PENDING + Snap token.
+    private function midtransTopUp(User $user, int $amount): array
     {
         return DB::transaction(function () use ($user, $amount) {
             $txCode = $this->generateCode();
@@ -28,7 +67,6 @@ class WalletService
                 'description'   => 'Top up saldo via Midtrans',
             ]);
 
-            // Config Midtrans
             Config::$serverKey = config('midtrans.server_key');
             Config::$isProduction = config('midtrans.is_production');
             Config::$isSanitized = config('midtrans.is_sanitized');
@@ -58,11 +96,11 @@ class WalletService
                 'transaction'  => $tx,
                 'snap_token'   => $snapToken,
                 'redirect_url' => $redirectUrl,
+                'direct'       => false,
             ];
         });
     }
 
-    // Complete top up transaction: update status, and add balance if SUCCESS.
     public function completeTopUp(string $code, string $status): ?Transaction
     {
         return DB::transaction(function () use ($code, $status) {
@@ -93,7 +131,6 @@ class WalletService
         });
     }
 
-    // Fetch payment status from Midtrans API directly and update database.
     public function checkAndUpdateStatus(string $code): array
     {
         return DB::transaction(function () use ($code) {
@@ -141,7 +178,7 @@ class WalletService
         });
     }
 
-    // Transfer: atomic debit+credit with lockForUpdate to prevent race conditions.
+    // Transfer: atomic debit+credit with lockForUpdate.
     public function transfer(User $sender, string $recipientIdentifier, int $amount, ?string $description): array
     {
         return DB::transaction(function () use ($sender, $recipientIdentifier, $amount, $description) {
@@ -158,7 +195,6 @@ class WalletService
                 throw new \DomainException('Tidak dapat transfer ke diri sendiri.', 422);
             }
 
-            // Lock sender's wallet row to prevent concurrent balance modification.
             $senderWallet = Wallet::where('user_id', $sender->id)->lockForUpdate()->first();
 
             if (bccomp((string) $senderWallet->balance, (string) $amount, 2) < 0) {
@@ -167,7 +203,6 @@ class WalletService
 
             $transferCode = Str::uuid()->toString();
 
-            // Debit sender
             $senderWallet->balance = bcsub((string) $senderWallet->balance, (string) $amount, 2);
             $senderWallet->save();
 
@@ -182,7 +217,6 @@ class WalletService
                 'description'         => $description,
             ]);
 
-            // Credit recipient
             $recipientWallet = Wallet::where('user_id', $recipient->id)->first();
             $recipientWallet->balance = bcadd((string) $recipientWallet->balance, (string) $amount, 2);
             $recipientWallet->save();
@@ -198,6 +232,9 @@ class WalletService
                 'description'         => $description,
             ]);
 
+            // Apply cashback for sender if eligible
+            $this->applyCashback($sender, $amount, 'transfer');
+
             return [
                 'wallet'      => $senderWallet,
                 'transaction' => $senderTx->load('counterpartUser'),
@@ -205,7 +242,32 @@ class WalletService
         });
     }
 
-    // Pembayaran tagihan simulasi (Pulsa/PLN/Air/Internet): potong saldo, catat TRANSFER_OUT.
+    // Redeem voucher: tambah saldo user, catat transaksi, tandai sudah dipakai.
+    public function redeemVoucher(User $user, Voucher $voucher): array
+    {
+        return DB::transaction(function () use ($user, $voucher) {
+            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+            $amount = (int) $voucher->value;
+            $wallet->balance = bcadd((string) $wallet->balance, (string) $amount, 2);
+            $wallet->save();
+
+            $tx = Transaction::create([
+                'code'          => $this->generateCode(),
+                'user_id'       => $user->id,
+                'type'          => 'TOPUP',
+                'status'        => 'SUCCESS',
+                'amount'        => $amount,
+                'balance_after' => $wallet->balance,
+                'description'   => 'Redeem voucher: ' . $voucher->code . ' — ' . $voucher->description,
+            ]);
+
+            $voucher->users()->attach($user->id, ['used_at' => now()]);
+
+            return ['wallet' => $wallet, 'transaction' => $tx];
+        });
+    }
+
+    // Pembayaran tagihan: potong saldo, catat TRANSFER_OUT, lalu cek cashback.
     public function pay(User $user, int $amount, string $description): array
     {
         return DB::transaction(function () use ($user, $amount, $description) {
@@ -228,8 +290,42 @@ class WalletService
                 'description'   => $description,
             ]);
 
+            // Apply cashback for payment if eligible
+            $this->applyCashback($user, $amount, 'pay');
+
             return ['wallet' => $wallet, 'transaction' => $tx];
         });
+    }
+
+    // Apply cashback to user if eligible based on active promos.
+    // Dipanggil dalam transaksi DB yang sudah ada — tanpa DB::transaction() sendiri.
+    private function applyCashback(User $user, int $amount, string $type): void
+    {
+        $promos = config('wallet.promos', []);
+
+        foreach ($promos as $promo) {
+            if ($promo['type'] !== $type) continue;
+            if ($promo['cashback_percent'] <= 0) continue;
+            if ($amount < $promo['min_amount']) continue;
+
+            $cashback = (int) round($amount * $promo['cashback_percent'] / 100);
+            $cashback = min($cashback, $promo['max_cashback']);
+            if ($cashback <= 0) continue;
+
+            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+            $wallet->balance = bcadd((string) $wallet->balance, (string) $cashback, 2);
+            $wallet->save();
+
+            Transaction::create([
+                'code'          => $this->generateCode(),
+                'user_id'       => $user->id,
+                'type'          => 'TOPUP',
+                'status'        => 'SUCCESS',
+                'amount'        => $cashback,
+                'balance_after' => $wallet->balance,
+                'description'   => $promo['title'] . ' — ' . $promo['description'],
+            ]);
+        }
     }
 
     private function generateCode(): string

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeftIcon } from './icons.jsx'
 import { prettyPhone } from '../lib/auth.js'
+import { T, FONT } from '../lib/theme.js'
 
 /**
  * OtpStep — langkah verifikasi OTP 6 digit (dipakai oleh halaman Login).
@@ -86,23 +87,23 @@ export default function OtpStep({ phone, onVerify, onResend, onBack, submitting,
         <ChevronLeftIcon size={16} /> Ubah nomor
       </button>
 
-      <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '14px 0 6px', color: '#17191D' }}>
+      <h1 style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', margin: '14px 0 6px', color: T.ink }}>
         Masukkan Kode OTP
       </h1>
-      <div style={{ height: 3, width: 44, background: '#BEF264', borderRadius: 2, marginBottom: 16 }} />
-      <p style={{ fontSize: 14, color: '#5C6B73', margin: '0 0 22px', lineHeight: 1.5 }}>
-        Kami mengirim 6 digit kode ke <strong style={{ color: '#17191D' }}>{prettyPhone(phone)}</strong>.
+      <div style={{ height: 3, width: 44, background: T.btnGrad, borderRadius: 2, marginBottom: 16 }} />
+      <p style={{ fontSize: 14, color: T.muted, margin: '0 0 22px', lineHeight: 1.5 }}>
+        Kami mengirim 6 digit kode ke <strong style={{ color: T.ink }}>{prettyPhone(phone)}</strong>.
       </p>
 
       {/* Badge kode OTP untuk dev — tidak muncul di production */}
       {devCode && (
-        <div style={{ marginBottom: 18, padding: '10px 14px', borderRadius: 10, background: 'rgba(190,242,100,0.10)', border: '1px dashed rgba(190,242,100,0.5)', color: '#3F6212', fontFamily: "'IBM Plex Mono',monospace", fontSize: 13 }}>
+        <div style={{ marginBottom: 18, padding: '10px 14px', borderRadius: 12, background: T.goldSoft, border: `1px dashed ${T.border2}`, color: T.goldBright, fontFamily: FONT.mono, fontSize: 13 }}>
           Mode dev — kode OTP: <strong style={{ letterSpacing: '0.12em' }}>{devCode}</strong>
         </div>
       )}
 
       {error && (
-        <div role="alert" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 10, background: 'rgba(122,49,66,0.08)', border: '1px solid rgba(122,49,66,0.25)', color: '#7A3142', fontSize: 14, fontWeight: 500 }}>
+        <div role="alert" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 12, background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', color: T.outRose, fontSize: 14, fontWeight: 500 }}>
           {error}
         </div>
       )}
@@ -130,24 +131,24 @@ export default function OtpStep({ phone, onVerify, onResend, onBack, submitting,
         disabled={code.length !== 6 || submitting}
         className={code.length === 6 && !submitting ? 'cta-gold' : undefined}
         style={{
-          width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-          fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, fontWeight: 700,
+          width: '100%', padding: '15px 0', borderRadius: 12, border: 'none',
+          fontFamily: FONT.sans, fontSize: 15, fontWeight: 700,
           cursor: code.length === 6 && !submitting ? 'pointer' : 'not-allowed',
-          background: code.length === 6 && !submitting ? '#BEF264' : 'rgba(92,107,115,0.18)',
-          color: code.length === 6 && !submitting ? '#16210A' : '#5C6B73',
-          boxShadow: code.length === 6 && !submitting ? '0 10px 22px -10px rgba(190,242,100,0.7)' : 'none',
+          background: code.length === 6 && !submitting ? T.btnGrad : 'rgba(255,255,255,0.06)',
+          color: code.length === 6 && !submitting ? T.onGold : T.mutedDim,
+          boxShadow: code.length === 6 && !submitting ? '0 14px 30px -12px rgba(201,149,43,0.7)' : 'none',
           transition: 'background .15s, transform .15s',
         }}
       >
         {submitting ? 'Memverifikasi…' : 'Verifikasi & Masuk'}
       </button>
 
-      <p style={{ marginTop: 18, fontSize: 14, color: '#5C6B73', textAlign: 'center' }}>
+      <p style={{ marginTop: 18, fontSize: 14, color: T.muted, textAlign: 'center' }}>
         Tidak menerima kode?{' '}
         {seconds > 0 ? (
-          <span style={{ color: '#5C6B73' }}>kirim ulang dalam {seconds}s</span>
+          <span style={{ color: T.muted }}>kirim ulang dalam {seconds}s</span>
         ) : (
-          <button type="button" onClick={resend} style={{ background: 'none', border: 'none', color: '#4D7C0F', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 14 }}>
+          <button type="button" onClick={resend} style={{ background: 'none', border: 'none', color: T.goldBright, fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 14 }}>
             Kirim ulang
           </button>
         )}
@@ -158,13 +159,13 @@ export default function OtpStep({ phone, onVerify, onResend, onBack, submitting,
 
 const backBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 4,
-  background: 'none', border: 'none', color: '#5C6B73',
+  background: 'none', border: 'none', color: T.muted,
   fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0,
 }
 
 const otpBox = {
   width: '100%', height: 56, textAlign: 'center',
-  borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.18)',
-  background: '#fbfcf9', outline: 'none',
-  fontFamily: "'IBM Plex Mono',monospace", fontSize: 24, fontWeight: 600, color: '#17191D',
+  borderRadius: 12, border: `1.5px solid ${T.border}`,
+  background: T.surface2, outline: 'none',
+  fontFamily: FONT.mono, fontSize: 24, fontWeight: 600, color: T.ink,
 }

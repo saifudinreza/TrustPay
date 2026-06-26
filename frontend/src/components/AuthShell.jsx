@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Logo from './Logo.jsx'
 import { CheckIcon } from './icons.jsx'
+import { T, FONT } from '../lib/theme.js'
 
 /**
  * AuthShell — layout dua kolom bersama untuk halaman Login dan Register.
@@ -14,7 +15,7 @@ import { CheckIcon } from './icons.jsx'
  */
 export default function AuthShell({ tagline, children }) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#EFF1EC' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: T.bg }}>
       <div className="login-shell" style={{ flex: 1, display: 'flex', alignItems: 'stretch' }}>
 
         {/* ===== PANEL KIRI — merek & tagline ===== */}
@@ -23,8 +24,8 @@ export default function AuthShell({ tagline, children }) {
           style={{
             position: 'relative',
             width: '40%',
-            background: 'linear-gradient(160deg,#2A2D33 0%,#17191D 60%,#0E1014 100%)',
-            color: '#EFF1EC',
+            background: T.cardGrad,
+            color: '#fff',
             padding: '44px 40px',
             display: 'flex',
             flexDirection: 'column',
@@ -32,8 +33,9 @@ export default function AuthShell({ tagline, children }) {
             overflow: 'hidden',
           }}
         >
-          {/* Dekorasi lingkaran emas */}
-          <div style={{ position: 'absolute', right: -50, bottom: 80, width: 260, height: 260, border: '2px solid rgba(190,242,100,0.16)', borderRadius: '50%', transform: 'rotate(-8deg)' }} />
+          {/* Dekorasi lingkaran */}
+          <div style={{ position: 'absolute', right: -50, bottom: 80, width: 260, height: 260, border: '2px solid rgba(255,255,255,0.18)', borderRadius: '50%', transform: 'rotate(-8deg)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(340px 220px at 80% -10%, rgba(255,255,255,0.2), transparent 65%)', pointerEvents: 'none' }} />
 
           {/* Logo — klik untuk kembali ke Landing */}
           <div style={{ position: 'relative', zIndex: 1 }}>
@@ -44,18 +46,18 @@ export default function AuthShell({ tagline, children }) {
 
           {/* Stempel + tagline */}
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ width: 88, height: 88, border: '2.5px solid rgba(190,242,100,0.8)', borderRadius: '50%', transform: 'rotate(-8deg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 26 }}>
-              <span style={{ color: '#BEF264', display: 'flex' }}><CheckIcon size={24} strokeWidth={2.6} /></span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, letterSpacing: '0.16em', color: '#BEF264', textTransform: 'uppercase', marginTop: 4 }}>Tercatat</span>
+            <div style={{ width: 88, height: 88, border: '2.5px solid rgba(255,255,255,0.85)', borderRadius: '50%', transform: 'rotate(-8deg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: 26 }}>
+              <span style={{ color: '#fff', display: 'flex' }}><CheckIcon size={24} strokeWidth={2.6} /></span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.16em', color: '#fff', textTransform: 'uppercase', marginTop: 4 }}>Aman</span>
             </div>
-            <p style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 500, fontSize: 24, lineHeight: 1.3, margin: 0, maxWidth: 320, whiteSpace: 'pre-line' }}>
+            <p style={{ fontFamily: FONT.display, fontWeight: 500, fontSize: 24, lineHeight: 1.3, margin: 0, maxWidth: 320, whiteSpace: 'pre-line' }}>
               {tagline}
             </p>
           </div>
         </div>
 
         {/* ===== AREA FORM (kanan) ===== */}
-        <div className="login-form-wrap" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 28px' }}>
+        <div className="login-form-wrap" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', background: T.bg }}>
           {children}
         </div>
       </div>

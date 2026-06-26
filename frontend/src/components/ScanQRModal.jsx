@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Overlay, Perforation, SubmitButton, modalTitle, closeBtn, label } from './TopUpModal.jsx'
-import { CloseIcon, ScanIcon, AlertIcon, CheckIcon, CameraIcon } from './icons.jsx'
+import { Overlay, SubmitButton, modalTitle, closeBtn, label } from './TopUpModal.jsx'
+import { CloseIcon, AlertIcon, CheckIcon, CameraIcon } from './icons.jsx'
 import { group, validateNominal, fmtRp } from '../lib/wallet.js'
+import { T, FONT } from '../lib/theme.js'
 
 /**
  * ScanQRModal — scan QRIS merchant via kamera, lalu konfirmasi pembayaran.
@@ -132,9 +133,9 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
     <Overlay onClose={() => { stopCam(); onClose() }}>
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: 430, maxWidth: '100%', background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 40px 80px -24px rgba(10,11,14,0.5)', animation: 'popIn .24s cubic-bezier(.2,.8,.3,1)' }}
+        style={{ width: 430, maxWidth: '100%', background: T.surface, borderRadius: 22, overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: '0 40px 90px -24px rgba(0,0,0,0.85)', animation: 'popIn .24s cubic-bezier(.2,.8,.3,1)' }}
       >
-        <Perforation />
+        <div style={{ height: 4, background: T.btnGrad }} />
 
         {/* header */}
         <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -160,7 +161,7 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
                   <Corner pos={{ bottom: 0, left: 0 }} b={{ right: 'none', top: 'none' }} br="0 0 0 4px" />
                   <Corner pos={{ bottom: 0, right: 0 }} b={{ left: 'none', top: 'none' }} br="0 0 4px 0" />
                   {/* scan line */}
-                  <div style={{ position: 'absolute', left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #BEF264 30%, #BEF264 70%, transparent)', animation: 'scanLine 2.4s linear infinite' }} />
+                  <div style={{ position: 'absolute', left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #F5CE53 30%, #F5CE53 70%, transparent)', animation: 'scanLine 2.4s linear infinite' }} />
                 </div>
               </div>
               {phase === 'init' && (
@@ -170,10 +171,10 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
               )}
             </div>
             <div style={{ padding: '16px 24px 20px', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 14px', fontSize: 14, color: '#5C6B73' }}>Arahkan kamera ke QR Code merchant</p>
+              <p style={{ margin: '0 0 14px', fontSize: 14, color: T.muted }}>Arahkan kamera ke QR Code merchant</p>
               <button
                 onClick={runDemo}
-                style={{ background: 'transparent', border: '1.5px solid rgba(23,25,29,0.18)', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600, color: '#17191D', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans',sans-serif" }}
+                style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600, color: T.ink, cursor: 'pointer', fontFamily: FONT.sans }}
               >
                 Demo: Scan Merchant
               </button>
@@ -184,14 +185,14 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
         {/* ===== NO SUPPORT ===== */}
         {phase === 'no-support' && (
           <div style={{ padding: '28px 24px 24px', textAlign: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(23,25,29,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', color: '#5C6B73' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: T.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', color: T.muted }}>
               <CameraIcon size={26} />
             </div>
-            <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: '#17191D' }}>Browser tidak mendukung</p>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: '#5C6B73' }}>Scan QR otomatis membutuhkan Chrome / Edge / Safari. Gunakan mode demo untuk presentasi.</p>
+            <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: T.ink }}>Browser tidak mendukung</p>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: T.muted }}>Scan QR otomatis membutuhkan Chrome / Edge / Safari. Gunakan mode demo untuk presentasi.</p>
             <button
               onClick={runDemo}
-              style={{ width: '100%', padding: '13px 0', borderRadius: 10, border: 'none', background: '#BEF264', color: '#16210A', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+              style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: T.btnGrad, color: T.onGold, fontFamily: FONT.sans, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
             >
               Demo: Scan Merchant
             </button>
@@ -201,12 +202,12 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
         {/* ===== CAM ERROR ===== */}
         {phase === 'cam-error' && (
           <div style={{ padding: '28px 24px 24px', textAlign: 'center' }}>
-            <div style={{ color: '#7A3142', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><AlertIcon size={36} /></div>
-            <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: '#17191D' }}>Kamera tidak dapat diakses</p>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: '#5C6B73' }}>Pastikan izin kamera sudah diberikan di browser, atau gunakan mode demo.</p>
+            <div style={{ color: T.outRose, marginBottom: 12, display: 'flex', justifyContent: 'center' }}><AlertIcon size={36} /></div>
+            <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: T.ink }}>Kamera tidak dapat diakses</p>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: T.muted }}>Pastikan izin kamera sudah diberikan di browser, atau gunakan mode demo.</p>
             <button
               onClick={runDemo}
-              style={{ width: '100%', padding: '13px 0', borderRadius: 10, border: 'none', background: '#BEF264', color: '#16210A', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+              style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: T.btnGrad, color: T.onGold, fontFamily: FONT.sans, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
             >
               Demo: Scan Merchant
             </button>
@@ -216,17 +217,17 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
         {/* ===== QR DITEMUKAN — form bayar ===== */}
         {phase === 'found' && (
           <div style={{ padding: '20px 24px 26px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'rgba(47,111,78,0.07)', border: '1px solid rgba(47,111,78,0.18)', marginBottom: 22 }}>
-              <span style={{ color: '#2F6F4E', display: 'flex' }}><CheckIcon size={22} strokeWidth={2.2} /></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.25)', marginBottom: 22 }}>
+              <span style={{ color: T.inGreen, display: 'flex' }}><CheckIcon size={22} strokeWidth={2.2} /></span>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#2F6F4E' }}>QR Terdeteksi</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#17191D', marginTop: 2 }}>{merchant}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.inGreen }}>QR Terdeteksi</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginTop: 2 }}>{merchant}</div>
               </div>
             </div>
 
             <label style={label}>Nominal Pembayaran</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 50, borderRadius: 10, border: `1.5px solid ${showErr ? '#7A3142' : 'rgba(23,25,29,0.18)'}`, background: '#fbfcf9', marginBottom: showErr ? 0 : 4 }}>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 16, color: '#5C6B73' }}>Rp</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 52, borderRadius: 12, border: `1.5px solid ${showErr ? T.outRose : T.border}`, background: T.surface2, marginBottom: showErr ? 0 : 4 }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 16, color: T.muted }}>Rp</span>
               <input
                 value={raw}
                 onChange={e => { setRaw(e.target.value); setRawTouched(true); setBalErr(false) }}
@@ -234,26 +235,26 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
                 inputMode="numeric"
                 placeholder="0"
                 autoFocus
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: "'IBM Plex Mono',monospace", fontSize: 18, color: '#17191D', fontFeatureSettings: "'tnum'" }}
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT.mono, fontSize: 20, color: T.ink, fontFeatureSettings: "'tnum'" }}
               />
             </div>
-            {showErr && <div style={{ marginTop: 6, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, color: '#7A3142', marginBottom: 4 }}>{v.err}</div>}
+            {showErr && <div style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 12, color: T.outRose, marginBottom: 4 }}>{v.err}</div>}
             {balErr && (
-              <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 10, background: 'rgba(122,49,66,0.08)', border: '1px solid rgba(122,49,66,0.22)', display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ color: '#7A3142', display: 'flex' }}><AlertIcon size={15} /></span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#7A3142' }}>Saldo tidak cukup.</span>
+              <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(251,113,133,0.12)', border: '1px solid rgba(251,113,133,0.3)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ color: T.outRose, display: 'flex' }}><AlertIcon size={15} /></span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: T.outRose }}>Saldo tidak cukup.</span>
               </div>
             )}
 
             <div style={{ marginTop: 20 }}>
               <SubmitButton enabled={canPay} onClick={handlePay}>
-                {submitting ? 'Memproses…' : `Bayar${amt > 0 ? ' ' + fmtRp(amt) : ''}`}
+                {submitting ? 'Memproses…' : `Lanjut${amt > 0 ? ' · ' + fmtRp(amt) : ''}`}
               </SubmitButton>
             </div>
 
             <button
               onClick={() => { setPhase('no-support') }}
-              style={{ width: '100%', marginTop: 10, padding: '10px 0', borderRadius: 10, border: '1.5px solid rgba(23,25,29,0.14)', background: 'transparent', color: '#5C6B73', fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+              style={{ width: '100%', marginTop: 10, padding: '11px 0', borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.muted, fontFamily: FONT.sans, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
             >
               ← Scan ulang
             </button>
@@ -271,7 +272,7 @@ function Corner({ pos, b, br }) {
       position: 'absolute',
       ...pos,
       width: 28, height: 28,
-      border: '3px solid #BEF264',
+      border: '3px solid #F5CE53',
       borderRightWidth: b.right !== undefined ? 0 : 3,
       borderBottomWidth: b.bottom !== undefined ? 0 : 3,
       borderLeftWidth: b.left !== undefined ? 0 : 3,

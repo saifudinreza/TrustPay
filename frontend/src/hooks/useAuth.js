@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getCurrentUser, setSession, clearSession } from '../lib/auth.js'
-import { apiPost } from '../lib/api.js'
+import { getCurrentUser, setSession, clearSession, getToken } from '../lib/auth.js'
+import { apiPost, apiPut } from '../lib/api.js'
 
 /**
  * useAuth — hook autentikasi global.
@@ -21,10 +21,18 @@ export default function useAuth() {
     setUser(getCurrentUser())
     setReady(true) // sinyal bahwa state sudah tersinkron dengan storage
 
-    // Sinkronkan antar-tab: jika tab lain login/logout, user key localStorage berubah
-    const onStorage = () => setUser(getCurrentUser())
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    // Sinkronkan:
+    //  - antar-TAB lewat event 'storage' (login/logout di tab lain)
+    //  - antar-KOMPONEN di tab yang sama lewat event kustom 'trustpay:auth'
+    //    (event 'storage' tidak menyala di tab yang menulis, jadi kita pakai event sendiri
+    //     agar Profile & Dashboard ikut ter-update setelah edit profil / atur PIN).
+    const sync = () => setUser(getCurrentUser())
+    window.addEventListener('storage', sync)
+    window.addEventListener('trustpay:auth', sync)
+    return () => {
+      window.removeEventListener('storage', sync)
+      window.removeEventListener('trustpay:auth', sync)
+    }
   }, [])
 
   /**
@@ -74,6 +82,44 @@ export default function useAuth() {
   }, [])
 
   /**
+   * UPDATE PROFILE — perbarui nama/username/email/HP (PUT /me).
+   * Backend mengembalikan user terbaru → simpan ulang ke sesi & state.
+   */
+  const updateProfile = useCallback(async ({ name, username, email, phone }) => {
+    const data = await apiPut('/me', {
+      name,
+      username: String(username || '').replace(/^@/, ''), // kirim tanpa '@'
+      email,
+      phone: phone || undefined,
+    })
+    persistUser(data.user)
+    return data.user
+  }, [])
+
+  /**
+   * SET / CHANGE PIN — atur PIN 6 digit (POST /pin).
+   * `currentPin` hanya wajib saat mengubah PIN yang sudah ada.
+   */
+  const setPin = useCallback(async ({ pin, currentPin }) => {
+    const data = await apiPost('/pin', {
+      pin,
+      pin_confirmation: pin,
+      current_pin: currentPin || undefined,
+    })
+    persistUser(data.user)
+    return data.user
+  }, [])
+
+  // Simpan ulang data user (token tetap) ke cookie+localStorage dan state React,
+  // lalu beri tahu komponen lain di tab yang sama (Dashboard/Profile) untuk re-sync.
+  const persistUser = (u) => {
+    const token = getToken()
+    if (token) setSession(token, u)
+    setUser(u)
+    window.dispatchEvent(new Event('trustpay:auth'))
+  }
+
+  /**
    * LOGOUT — hapus token di backend (token Sanctum yang dipakai), lalu bersihkan sesi lokal.
    * Error API diabaikan (mis. token sudah kedaluwarsa) — tetap logout dari sisi klien.
    */
@@ -83,5 +129,5 @@ export default function useAuth() {
     setUser(null)
   }, [])
 
-  return { user, ready, register, login, requestLoginOtp, verifyOtp, logout }
+  return { user, ready, register, login, requestLoginOtp, verifyOtp, updateProfile, setPin, logout }
 }

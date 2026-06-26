@@ -27,8 +27,8 @@ export default function Logo({ size = 40, showText = true, textSize = 19 }) {
             <stop offset="1" stopColor="#0C0E11" />
           </linearGradient>
           <linearGradient id={gold} x1="14" y1="13" x2="34" y2="36" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#E9FBA8" />
-            <stop offset="1" stopColor="#9BCF2E" />
+            <stop stopColor="#E6B84C" />
+            <stop offset="1" stopColor="#C9952B" />
           </linearGradient>
           <linearGradient id={gloss} x1="24" y1="3" x2="24" y2="26" gradientUnits="userSpaceOnUse">
             <stop stopColor="#fff" stopOpacity="0.22" />
@@ -38,7 +38,7 @@ export default function Logo({ size = 40, showText = true, textSize = 19 }) {
 
         {/* squircle body + subtle ring so it stays visible on dark backgrounds */}
         <rect x="3" y="3" width="42" height="42" rx="14" fill={`url(#${bg})`} />
-        <rect x="3.6" y="3.6" width="40.8" height="40.8" rx="13.4" stroke="#4D7C0F" strokeOpacity="0.28" strokeWidth="1.2" />
+        <rect x="3.6" y="3.6" width="40.8" height="40.8" rx="13.4" stroke="#F5CE53" strokeOpacity="0.45" strokeWidth="1.2" />
         <path d="M17 3.6h14a13.4 13.4 0 0 1 13.4 13.4v1.5C38 14 30 11.5 24 11.5S10 14 3.6 18.5V17A13.4 13.4 0 0 1 17 3.6Z" fill={`url(#${gloss})`} />
 
         {/* shield (verified ledger) */}
@@ -72,7 +72,7 @@ export default function Logo({ size = 40, showText = true, textSize = 19 }) {
             lineHeight: 1,
           }}
         >
-          Trust<span style={{ color: '#4D7C0F' }}>Pay</span>
+          Trust<span style={{ color: '#F5CE53' }}>Pay</span>
         </span>
       )}
     </div>
