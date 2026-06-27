@@ -44,35 +44,37 @@ class SocialAuthController extends Controller
             ->orWhere('email', $googleUser->getEmail())
             ->first();
 
+        $isNewUser = false;
+
         if ($user) {
             // Tautkan google_id jika user lama belum punya (daftar via email dulu).
             if (! $user->google_id) {
                 $user->update(['google_id' => $googleUser->getId()]);
             }
         } else {
-            // Buat akun baru dari data Google.
+            // Buat akun baru dari data Google — mulai sebagai pending, butuh persetujuan admin.
+            $isNewUser = true;
             $user = User::create([
-                'name'      => $googleUser->getName() ?: 'Pengguna Google',
-                'username'  => $this->uniqueUsername($googleUser->getEmail(), $googleUser->getName()),
-                'email'     => $googleUser->getEmail(),
-                'google_id' => $googleUser->getId(),
-                'password'  => null, // Google user tidak butuh password
+                'name'        => $googleUser->getName() ?: 'Pengguna Google',
+                'username'    => $this->uniqueUsername($googleUser->getEmail(), $googleUser->getName()),
+                'email'       => $googleUser->getEmail(),
+                'google_id'   => $googleUser->getId(),
+                'password'    => null,
+                'is_approved' => false,
             ]);
 
-            // Buat wallet awal saldo 0 (sama seperti register normal).
+            // Buat wallet awal saldo 0 (aktif setelah disetujui admin).
             $user->wallet()->create(['balance' => 0]);
+        }
+
+        // Blokir akun Google yang belum disetujui admin.
+        if (! $user->is_approved) {
+            return redirect("{$frontendUrl}/menunggu?email=" . urlencode($user->email));
         }
 
         $token = $user->createToken('api-google')->plainTextToken;
 
-        // Encode data user sebagai JSON di URL — frontend menyimpannya ke localStorage.
-        $userData = urlencode(json_encode([
-            'id'       => $user->id,
-            'name'     => $user->name,
-            'username' => '@' . $user->username,
-            'email'    => $user->email,
-            'phone'    => $user->phone,
-        ]));
+        $userData = urlencode(json_encode($user->toApiArray()));
 
         return redirect("{$frontendUrl}/auth/callback?token={$token}&user={$userData}");
     }

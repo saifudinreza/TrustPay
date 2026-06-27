@@ -6,7 +6,6 @@ use App\Http\Requests\TopUpRequest;
 use App\Http\Requests\TransferRequest;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Voucher;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -149,59 +148,6 @@ class WalletController extends Controller
             ]);
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
-        }
-    }
-
-    /**
-     * GET /promos — daftar promo & cashback aktif.
-     */
-    public function promos(): JsonResponse
-    {
-        return response()->json(['data' => config('wallet.promos', [])]);
-    }
-
-    /**
-     * POST /vouchers/redeem — redeem kode voucher.
-     */
-    public function redeemVoucher(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'code' => 'required|string|max:32',
-        ]);
-
-        $voucher = Voucher::where('code', strtoupper($data['code']))->first();
-
-        if (! $voucher) {
-            return response()->json(['message' => 'Kode voucher tidak ditemukan.'], 422);
-        }
-
-        if (! $voucher->is_active) {
-            return response()->json(['message' => 'Voucher sudah tidak aktif.'], 400);
-        }
-
-        if ($voucher->expires_at && $voucher->expires_at->isPast()) {
-            return response()->json(['message' => 'Voucher sudah kedaluwarsa.'], 400);
-        }
-
-        if ($voucher->max_uses && $voucher->users()->count() >= $voucher->max_uses) {
-            return response()->json(['message' => 'Kuota voucher sudah habis.'], 400);
-        }
-
-        $user = $request->user();
-        $usedCount = $voucher->users()->where('user_id', $user->id)->count();
-        if ($usedCount >= $voucher->max_uses_per_user) {
-            return response()->json(['message' => 'Kamu sudah pernah menggunakan voucher ini.'], 400);
-        }
-
-        try {
-            $result = $this->walletService->redeemVoucher($user, $voucher);
-            return response()->json([
-                'message'     => 'Voucher berhasil diredeem!',
-                'wallet'      => ['balance' => (float) $result['wallet']->balance],
-                'transaction' => $this->formatTx($result['transaction']),
-            ]);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 500);
         }
     }
 

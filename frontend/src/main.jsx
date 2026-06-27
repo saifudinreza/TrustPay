@@ -11,7 +11,8 @@ const Dashboard    = lazy(() => import('./pages/Dashboard.jsx'))
 const Login        = lazy(() => import('./pages/Login.jsx'))
 const Register     = lazy(() => import('./pages/Register.jsx'))
 const Profile      = lazy(() => import('./pages/Profile.jsx'))
-const AuthCallback = lazy(() => import('./pages/AuthCallback.jsx'))
+const AuthCallback    = lazy(() => import('./pages/AuthCallback.jsx'))
+const PendingApproval = lazy(() => import('./pages/PendingApproval.jsx'))
 
 /** Spinner saat Suspense menunggu chunk halaman diunduh */
 const PageLoader = () => (
@@ -63,6 +64,11 @@ const router = createBrowserRouter([
     // karena token belum tersimpan saat halaman ini dimuat pertama kali
     path: '/auth/callback',
     element: <Suspense fallback={<PageLoader />}><AuthCallback /></Suspense>,
+  },
+  {
+    // Halaman menunggu verifikasi admin — untuk akun Google baru yang belum disetujui
+    path: '/menunggu',
+    element: <Suspense fallback={<PageLoader />}><PendingApproval /></Suspense>,
   },
 ])
 

@@ -38,8 +38,6 @@ Dibuat sebagai proyek portfolio untuk Exam Penyaluran Kerja, Dibimbing Full Stac
 - **Bayar Tagihan** — Pulsa, Listrik PLN, Air PDAM, Internet (demo — potong saldo nyata)
 - **Scan QRIS** — kamera scan QR code merchant, konfirmasi bayar + PIN
 - **Terima QR** — tampilkan QR statis untuk diterima user lain
-- **Voucher** — redeem kode voucher untuk tambah saldo
-- **Cashback** — promo cashback otomatis berdasarkan konfigurasi aktif
 
 ### Dashboard
 - Saldo real-time dengan toggle sembunyikan
@@ -134,8 +132,6 @@ erDiagram
 | POST | `/api/transfer` | Transfer ke user lain *(butuh PIN)* |
 | POST | `/api/pay` | Bayar tagihan *(butuh PIN)* |
 | GET | `/api/transactions` | Riwayat transaksi |
-| GET | `/api/promos` | Daftar promo & cashback aktif |
-| POST | `/api/vouchers/redeem` | Redeem kode voucher |
 
 ### Kode Status
 

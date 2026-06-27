@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Voucher;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -232,9 +231,6 @@ class WalletService
                 'description'         => $description,
             ]);
 
-            // Apply cashback for sender if eligible
-            $this->applyCashback($sender, $amount, 'transfer');
-
             return [
                 'wallet'      => $senderWallet,
                 'transaction' => $senderTx->load('counterpartUser'),
@@ -242,32 +238,7 @@ class WalletService
         });
     }
 
-    // Redeem voucher: tambah saldo user, catat transaksi, tandai sudah dipakai.
-    public function redeemVoucher(User $user, Voucher $voucher): array
-    {
-        return DB::transaction(function () use ($user, $voucher) {
-            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
-            $amount = (int) $voucher->value;
-            $wallet->balance = bcadd((string) $wallet->balance, (string) $amount, 2);
-            $wallet->save();
-
-            $tx = Transaction::create([
-                'code'          => $this->generateCode(),
-                'user_id'       => $user->id,
-                'type'          => 'TOPUP',
-                'status'        => 'SUCCESS',
-                'amount'        => $amount,
-                'balance_after' => $wallet->balance,
-                'description'   => 'Redeem voucher: ' . $voucher->code . ' — ' . $voucher->description,
-            ]);
-
-            $voucher->users()->attach($user->id, ['used_at' => now()]);
-
-            return ['wallet' => $wallet, 'transaction' => $tx];
-        });
-    }
-
-    // Pembayaran tagihan: potong saldo, catat TRANSFER_OUT, lalu cek cashback.
+    // Pembayaran tagihan: potong saldo, catat TRANSFER_OUT.
     public function pay(User $user, int $amount, string $description): array
     {
         return DB::transaction(function () use ($user, $amount, $description) {
@@ -290,42 +261,8 @@ class WalletService
                 'description'   => $description,
             ]);
 
-            // Apply cashback for payment if eligible
-            $this->applyCashback($user, $amount, 'pay');
-
             return ['wallet' => $wallet, 'transaction' => $tx];
         });
-    }
-
-    // Apply cashback to user if eligible based on active promos.
-    // Dipanggil dalam transaksi DB yang sudah ada — tanpa DB::transaction() sendiri.
-    private function applyCashback(User $user, int $amount, string $type): void
-    {
-        $promos = config('wallet.promos', []);
-
-        foreach ($promos as $promo) {
-            if ($promo['type'] !== $type) continue;
-            if ($promo['cashback_percent'] <= 0) continue;
-            if ($amount < $promo['min_amount']) continue;
-
-            $cashback = (int) round($amount * $promo['cashback_percent'] / 100);
-            $cashback = min($cashback, $promo['max_cashback']);
-            if ($cashback <= 0) continue;
-
-            $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
-            $wallet->balance = bcadd((string) $wallet->balance, (string) $cashback, 2);
-            $wallet->save();
-
-            Transaction::create([
-                'code'          => $this->generateCode(),
-                'user_id'       => $user->id,
-                'type'          => 'TOPUP',
-                'status'        => 'SUCCESS',
-                'amount'        => $cashback,
-                'balance_after' => $wallet->balance,
-                'description'   => $promo['title'] . ' — ' . $promo['description'],
-            ]);
-        }
     }
 
     private function generateCode(): string

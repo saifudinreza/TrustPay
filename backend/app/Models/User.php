@@ -26,7 +26,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * Trait HasApiTokens memungkinkan `$user->createToken(...)` dari Sanctum.
  */
-#[Fillable(['name', 'username', 'email', 'phone', 'password', 'pin', 'google_id'])]
+#[Fillable(['name', 'username', 'email', 'phone', 'password', 'pin', 'google_id', 'is_approved'])]
 #[Hidden(['password', 'pin', 'remember_token'])] // JANGAN pernah kirim password/pin/token ke frontend
 class User extends Authenticatable
 {
@@ -42,8 +42,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'pin' => 'hashed', // PIN otomatis di-hash saat diisi, sama seperti password
+            'password'          => 'hashed',
+            'pin'               => 'hashed',
+            'is_approved'       => 'boolean',
         ];
     }
 
@@ -56,12 +57,13 @@ class User extends Authenticatable
     public function toApiArray(): array
     {
         return [
-            'id'       => $this->id,
-            'name'     => $this->name,
-            'username' => '@' . $this->username,
-            'email'    => $this->email,
-            'phone'    => $this->phone,
-            'has_pin'  => ! is_null($this->pin),
+            'id'          => $this->id,
+            'name'        => $this->name,
+            'username'    => '@' . $this->username,
+            'email'       => $this->email,
+            'phone'       => $this->phone,
+            'has_pin'     => ! is_null($this->pin),
+            'is_approved' => (bool) $this->is_approved,
         ];
     }
 

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 import TopUpModal from '../components/TopUpModal.jsx'
-import VoucherModal from '../components/VoucherModal.jsx'
 import TransferModal from '../components/TransferModal.jsx'
 import PayModal from '../components/PayModal.jsx'
 import PinModal from '../components/PinModal.jsx'
@@ -15,26 +14,23 @@ import { SERVICES } from '../components/QuickActions.jsx'
 import HistoryFilter from '../components/HistoryFilter.jsx'
 import useWallet from '../hooks/useWallet.js'
 import useAuth from '../hooks/useAuth.js'
-import { apiGet } from '../lib/api.js'
 import { T, FONT } from '../lib/theme.js'
 import {
   PlusIcon, TransferIcon, CheckIcon,
   DownloadIcon, PrinterIcon,
   ChevronLeftIcon, ChevronRightIcon,
   EyeIcon, EyeOffIcon, LogoutIcon,
-  BellIcon, ScanIcon, QrIcon, GiftIcon, TagIcon,
+  BellIcon, ScanIcon, QrIcon,
   AlertIcon, ShieldCheckIcon,
   ArrowDownLeftIcon, ArrowUpRightIcon, ArrowRightIcon,
 } from '../components/icons.jsx'
 import {
-  PER, MONTHS, fmtRp, group, rowMeta,
+  PER, fmtRp, rowMeta,
   monthlySummary, filterTransactions, downloadCSV,
 } from '../lib/wallet.js'
 
 const EMPTY_FILTERS = { type: 'ALL', from: '', to: '', q: '' }
 const NOTIF_STORE = 'trustpay.notif.lastSeen'
-
-const PROMO_ICONS = { 1: GiftIcon, 2: TagIcon, 3: GiftIcon }
 
 function printRegion(cls) {
   document.body.classList.add(cls)
@@ -47,13 +43,13 @@ function printRegion(cls) {
 }
 
 export default function Dashboard() {
-  const { hydrated, balance, transactions, lastUpdate, applyTransaction, refreshWallet } = useWallet()
+  const { hydrated, balance, transactions, lastUpdate, applyTransaction } = useWallet()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const [loading, setLoading]         = useState(true)
   const [page, setPage]               = useState(0)
-  const [modal, setModal]             = useState(null)  // 'topup'|'transfer'|'qr'|'scan'|'voucher'|null
+  const [modal, setModal]             = useState(null)  // 'topup'|'transfer'|'qr'|'scan'|null
   const [payService, setPayService]   = useState(null)
   const [pendingTx, setPendingTx]     = useState(null)  // transaksi menunggu verifikasi PIN
   const [pinSetup, setPinSetup]       = useState(false) // buka modal atur PIN
@@ -62,7 +58,6 @@ export default function Dashboard() {
   const [showBalance, setShowBalance] = useState(true)
   const [filters, setFilters]         = useState(EMPTY_FILTERS)
   const [apiError, setApiError]       = useState(null)
-  const [promos, setPromos]           = useState([])
   const [notifOpen, setNotifOpen]     = useState(false)
   const [lastSeen, setLastSeen]       = useState(() => parseInt(localStorage.getItem(NOTIF_STORE) || '0', 10))
   const stampTimer = useRef(null)
@@ -89,10 +84,6 @@ export default function Dashboard() {
     return () => { clearTimeout(t); clearTimeout(stampTimer.current) }
   }, [])
 
-  useEffect(() => {
-    apiGet('/promos').then(res => setPromos(res.data ?? [])).catch(() => {})
-  }, [])
-
   const fireStamp = () => {
     setShowStamp(true)
     clearTimeout(stampTimer.current)
@@ -104,13 +95,6 @@ export default function Dashboard() {
     setModal(null)
     setPayService(null)
     setPendingTx(null)
-    fireStamp()
-  }
-
-  // ---- VOUCHER ----
-  const onVoucherDone = async () => {
-    setModal(null)
-    await refreshWallet()
     fireStamp()
   }
 
@@ -268,13 +252,12 @@ export default function Dashboard() {
           {/* Kartu saldo premium + aksi terintegrasi */}
           <div style={{ position: 'relative' }}>
             <WalletCard
-              balance={balance} lastUpdate={lastUpdate} user={user} summary={summary}
+              balance={balance} lastUpdate={lastUpdate} user={user}
               show={showBalance} onToggle={() => setShowBalance(s => !s)}
               onTopup={() => setModal('topup')}
               onTransfer={() => setModal('transfer')}
               onScan={() => setModal('scan')}
               onReceive={() => setModal('qr')}
-              onVoucher={() => setModal('voucher')}
             />
             {showStamp && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
@@ -288,19 +271,6 @@ export default function Dashboard() {
 
           {/* Layanan & tagihan — showcase fitur */}
           <ServicesPanel onPick={onPickService} onTransfer={() => setModal('transfer')} />
-
-          {/* PROMO */}
-          {promos.length > 0 && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontFamily: FONT.display, fontWeight: 600, fontSize: 15, color: T.ink }}>Promo & Cashback</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.muted }}>Terbaru</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {promos.map(p => <PromoCard key={p.id} promo={p} />)}
-              </div>
-            </div>
-          )}
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderRadius: 14, background: T.surface, border: `1px solid ${T.border}` }}>
             <span style={{ color: T.goldBright, display: 'flex', marginTop: 1 }}><ShieldCheckIcon size={16} /></span>
@@ -370,7 +340,6 @@ export default function Dashboard() {
       {modal === 'transfer' && <TransferModal balance={balance} onClose={() => setModal(null)} onConfirm={onTransferConfirm} />}
       {modal === 'qr'       && <ReceiveQRModal user={user} onClose={() => setModal(null)} />}
       {modal === 'scan'     && <ScanQRModal balance={balance} onClose={() => setModal(null)} onPay={onQrisPay} />}
-      {modal === 'voucher'  && <VoucherModal onClose={() => setModal(null)} onDone={onVoucherDone} />}
       {payService && <PayModal service={payService} balance={balance} onClose={() => setPayService(null)} onConfirm={onPayConfirm} />}
 
       {/* PIN: gerbang keamanan + setup */}
@@ -393,7 +362,7 @@ export default function Dashboard() {
 // ====================================================================
 // Kartu saldo premium (hitam-emas) + 4 aksi utama terintegrasi
 // ====================================================================
-function WalletCard({ balance, lastUpdate, user, summary, show, onToggle, onTopup, onTransfer, onScan, onReceive, onVoucher }) {
+function WalletCard({ balance, lastUpdate, user, show, onToggle, onTopup, onTransfer, onScan, onReceive }) {
   const holder  = (user?.name || 'Pengguna').toUpperCase()
   const account = user?.account || '8021 4455 4021'
   const tail    = account.replace(/\s/g, '').slice(-4)
@@ -402,7 +371,6 @@ function WalletCard({ balance, lastUpdate, user, summary, show, onToggle, onTopu
   const actions = [
     { key: 'topup', label: 'Top Up', Icon: PlusIcon, onClick: onTopup, primary: true },
     { key: 'transfer', label: 'Transfer', Icon: TransferIcon, onClick: onTransfer },
-    { key: 'voucher', label: 'Voucher', Icon: GiftIcon, onClick: onVoucher },
     { key: 'scan', label: 'Scan', Icon: ScanIcon, onClick: onScan },
     { key: 'receive', label: 'Terima', Icon: QrIcon, onClick: onReceive },
   ]
@@ -444,7 +412,7 @@ function WalletCard({ balance, lastUpdate, user, summary, show, onToggle, onTopu
       </div>
 
       {/* Aksi utama */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, padding: '16px 14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '16px 14px' }}>
         {actions.map((a) => (
           <button key={a.key} onClick={a.onClick} className="act-btn" style={{ cursor: 'pointer', background: 'transparent', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '4px 0' }}>
             <span style={{ width: 50, height: 50, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: a.primary ? T.btnGrad : T.surface2, border: a.primary ? 'none' : `1px solid ${T.border2}`, color: a.primary ? T.onGold : T.goldBright, boxShadow: a.primary ? '0 10px 22px -10px rgba(201,149,43,0.7)' : 'none' }}>
@@ -528,12 +496,11 @@ function TxRow({ tx, onClick }) {
   const m = rowMeta(tx)
   const isIn = tx.amount > 0
   const isTopup = tx.type === 'TOPUP'
-  const isCashback = isTopup && tx.description && (tx.description.includes('Cashback') || tx.description.includes('cashback') || tx.description.includes('Redeem voucher'))
   const Icon = isTopup ? PlusIcon : isIn ? ArrowDownLeftIcon : ArrowUpRightIcon
   const title = isTopup
-    ? (isCashback ? tx.description : 'Top Up Saldo')
+    ? 'Top Up Saldo'
     : (m.counterparty && m.counterparty !== '—' ? m.counterparty : (tx.description || 'Transaksi'))
-  const sub = [tx.dateStr + ' · ' + tx.timeStr, (!isCashback && tx.description && tx.description !== title) ? tx.description : null].filter(Boolean).join(' · ')
+  const sub = [tx.dateStr + ' · ' + tx.timeStr, tx.description && tx.description !== title ? tx.description : null].filter(Boolean).join(' · ')
 
   return (
     <div data-row onClick={onClick} className="ledger-row" role="button" tabIndex={0}
@@ -549,25 +516,6 @@ function TxRow({ tx, onClick }) {
       <div style={{ textAlign: 'right', flex: 'none' }}>
         <div style={{ fontFamily: FONT.mono, fontSize: 15.5, fontWeight: 600, color: m.accent, fontFeatureSettings: "'tnum'" }}>{m.amountStr}</div>
         <div style={{ fontFamily: FONT.mono, fontSize: 11, color: T.mutedDim, marginTop: 2 }}>{m.balanceAfterStr !== '—' ? 'saldo ' + m.balanceAfterStr : tx.status === 'PENDING' ? 'pending' : '—'}</div>
-      </div>
-    </div>
-  )
-}
-
-function PromoCard({ promo }) {
-  const isDark = promo.dark
-  const Icon = PROMO_ICONS[promo.id] || GiftIcon
-  return (
-    <div className="promo-card" style={{ borderRadius: 16, padding: '14px 16px', background: isDark ? T.surface : T.btnGrad, display: 'flex', alignItems: 'center', gap: 14, cursor: 'default', border: isDark ? `1px solid ${T.border}` : 'none', boxShadow: isDark ? 'none' : '0 14px 30px -16px rgba(201,149,43,0.6)', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: isDark ? T.goldSoft : 'rgba(27,20,7,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDark ? T.goldBright : T.onGold, flex: 'none' }}>
-        <Icon size={20} />
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 14, color: isDark ? T.ink : T.onGold, marginBottom: 2 }}>{promo.title}</div>
-        <div style={{ fontSize: 12, color: isDark ? T.muted : 'rgba(27,20,7,0.7)' }}>{promo.description}</div>
-      </div>
-      <div style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 9px', borderRadius: 999, background: isDark ? T.goldSoft : 'rgba(27,20,7,0.16)', color: isDark ? T.inkSoft : T.onGold, flex: 'none' }}>
-        {promo.tag}
       </div>
     </div>
   )
