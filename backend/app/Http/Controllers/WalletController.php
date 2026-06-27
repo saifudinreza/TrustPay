@@ -172,7 +172,7 @@ class WalletController extends Controller
         $voucher = Voucher::where('code', strtoupper($data['code']))->first();
 
         if (! $voucher) {
-            return response()->json(['message' => 'Kode voucher tidak ditemukan.'], 404);
+            return response()->json(['message' => 'Kode voucher tidak ditemukan.'], 422);
         }
 
         if (! $voucher->is_active) {
