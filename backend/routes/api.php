@@ -13,9 +13,11 @@ Route::post('/login',    [AuthController::class, 'login']);              // utam
 Route::post('/login/request-otp', [AuthController::class, 'requestLoginOtp']); // phone → kirim OTP
 Route::post('/verify-otp',        [AuthController::class, 'verifyOtp']);       // phone+code → token
 
-// ---- Google OAuth (Socialite stateless) ----
-Route::get('/auth/google/redirect',  [SocialAuthController::class, 'redirectToGoogle']);   // redirect ke Google
-Route::get('/auth/google/callback',  [SocialAuthController::class, 'handleGoogleCallback']); // callback dari Google
+// ---- Google OAuth (Socialite stateless + OTP email) ----
+Route::get('/auth/google/redirect',    [SocialAuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback',    [SocialAuthController::class, 'handleGoogleCallback']);
+Route::post('/auth/google/verify-otp', [SocialAuthController::class, 'verifyGoogleOtp']);
+Route::post('/auth/google/resend-otp', [SocialAuthController::class, 'resendGoogleOtp']);
 
 // Midtrans Webhook
 Route::post('/webhooks/midtrans', [\App\Http\Controllers\MidtransWebhookController::class, 'handleNotification']);

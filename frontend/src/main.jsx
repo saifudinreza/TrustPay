@@ -13,6 +13,7 @@ const Register     = lazy(() => import('./pages/Register.jsx'))
 const Profile      = lazy(() => import('./pages/Profile.jsx'))
 const AuthCallback    = lazy(() => import('./pages/AuthCallback.jsx'))
 const PendingApproval = lazy(() => import('./pages/PendingApproval.jsx'))
+const GoogleOtpVerify = lazy(() => import('./pages/GoogleOtpVerify.jsx'))
 
 /** Spinner saat Suspense menunggu chunk halaman diunduh */
 const PageLoader = () => (
@@ -66,9 +67,13 @@ const router = createBrowserRouter([
     element: <Suspense fallback={<PageLoader />}><AuthCallback /></Suspense>,
   },
   {
-    // Halaman menunggu verifikasi admin — untuk akun Google baru yang belum disetujui
     path: '/menunggu',
     element: <Suspense fallback={<PageLoader />}><PendingApproval /></Suspense>,
+  },
+  {
+    // Verifikasi OTP yang dikirim ke Gmail setelah Google OAuth
+    path: '/auth/google/verifikasi',
+    element: <Suspense fallback={<PageLoader />}><GoogleOtpVerify /></Suspense>,
   },
 ])
 

@@ -2,33 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\GoogleOtpMail;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Socialite\Facades\Socialite;
 
 /**
- * SocialAuthController — login / register via Google OAuth (Laravel Socialite).
+ * SocialAuthController — login / register via Google OAuth dengan verifikasi OTP email.
  *
- * Alur:
+ * Alur dua langkah:
  *  1. Frontend redirect ke GET /api/auth/google/redirect
- *  2. Backend (Socialite stateless) redirect ke accounts.google.com
- *  3. User login di Google → Google redirect ke GET /api/auth/google/callback
- *  4. Backend ambil data Google, cari/buat user + wallet, buat Sanctum token
- *  5. Backend redirect ke {FRONTEND_URL}/auth/callback?token=xxx&user=yyy
- *  6. Frontend baca param, simpan sesi, masuk Dashboard
- *
- * Stateless: tidak membutuhkan session server (aman untuk deployment multi-instance
- * di Railway / Vercel). Google OAuth state dikelola via parameter URL saja.
+ *  2. Google callback → backend generate OTP, kirim ke Gmail user, redirect ke halaman OTP
+ *  3. User masukkan OTP → POST /api/auth/google/verify-otp
+ *  4. Backend verifikasi OTP → buat/login user → kembalikan token
  */
 class SocialAuthController extends Controller
 {
-    /** Redirect user ke halaman consent Google. */
+    private const OTP_TTL    = 600;  // 10 menit
+    private const CACHE_PREFIX = 'google_otp:';
+
     public function redirectToGoogle(): RedirectResponse
     {
         return Socialite::driver('google')->stateless()->redirect();
     }
 
-    /** Handle callback dari Google setelah user mengizinkan akses. */
     public function handleGoogleCallback(): RedirectResponse
     {
         $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
@@ -39,56 +40,137 @@ class SocialAuthController extends Controller
             return redirect("{$frontendUrl}/masuk?error=google_gagal");
         }
 
-        // Cari user: coba cocokkan via google_id dulu, fallback ke email.
-        $user = User::where('google_id', $googleUser->getId())
-            ->orWhere('email', $googleUser->getEmail())
-            ->first();
+        $email = $googleUser->getEmail();
+        $name  = $googleUser->getName() ?: 'Pengguna Google';
 
-        $isNewUser = false;
+        // Generate 6-digit OTP dan simpan ke cache bersama data Google
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        if ($user) {
-            // Tautkan google_id jika user lama belum punya (daftar via email dulu).
-            if (! $user->google_id) {
-                $user->update(['google_id' => $googleUser->getId()]);
-            }
-        } else {
-            // Buat akun baru dari data Google — mulai sebagai pending, butuh persetujuan admin.
-            $isNewUser = true;
-            $user = User::create([
-                'name'        => $googleUser->getName() ?: 'Pengguna Google',
-                'username'    => $this->uniqueUsername($googleUser->getEmail(), $googleUser->getName()),
-                'email'       => $googleUser->getEmail(),
-                'google_id'   => $googleUser->getId(),
-                'password'    => null,
-                'is_approved' => false,
-            ]);
+        Cache::put(self::CACHE_PREFIX . $email, [
+            'otp'       => $otp,
+            'google_id' => $googleUser->getId(),
+            'name'      => $name,
+            'email'     => $email,
+        ], self::OTP_TTL);
 
-            // Buat wallet awal saldo 0 (aktif setelah disetujui admin).
-            $user->wallet()->create(['balance' => 0]);
+        // Kirim OTP ke Gmail user
+        try {
+            Mail::to($email)->send(new GoogleOtpMail($otp, $name));
+        } catch (\Throwable $e) {
+            // Jika gagal kirim, tetap lanjut — di dev mode kode tampil di UI
+            \Log::warning('GoogleOTP mail failed: ' . $e->getMessage());
         }
 
-        // Blokir akun Google yang belum disetujui admin.
-        if (! $user->is_approved) {
-            return redirect("{$frontendUrl}/menunggu?email=" . urlencode($user->email));
+        $params = '?email=' . urlencode($email);
+
+        // Di local/dev: sertakan kode di URL agar bisa ditest tanpa SMTP nyata
+        if (config('app.env') === 'local') {
+            $params .= '&dev_code=' . $otp;
+        }
+
+        return redirect("{$frontendUrl}/auth/google/verifikasi{$params}");
+    }
+
+    /**
+     * POST /api/auth/google/verify-otp
+     * Verifikasi OTP dan selesaikan proses login/registrasi via Google.
+     */
+    public function verifyGoogleOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'otp'   => ['required', 'string', 'digits:6'],
+        ], [
+            'otp.digits' => 'Kode OTP harus 6 angka.',
+        ]);
+
+        $cached = Cache::get(self::CACHE_PREFIX . $data['email']);
+
+        if (! $cached) {
+            return response()->json(['message' => 'Kode OTP sudah kedaluwarsa. Silakan ulangi login Google.'], 422);
+        }
+
+        if ($cached['otp'] !== $data['otp']) {
+            return response()->json(['message' => 'Kode OTP salah. Periksa email kamu.'], 422);
+        }
+
+        // OTP valid — hapus dari cache agar tidak bisa dipakai lagi
+        Cache::forget(self::CACHE_PREFIX . $data['email']);
+
+        // Cari atau buat user
+        $user = User::where('google_id', $cached['google_id'])
+            ->orWhere('email', $cached['email'])
+            ->first();
+
+        if ($user) {
+            if (! $user->google_id) {
+                $user->update(['google_id' => $cached['google_id']]);
+            }
+        } else {
+            $user = User::create([
+                'name'        => $cached['name'],
+                'username'    => $this->uniqueUsername($cached['email'], $cached['name']),
+                'email'       => $cached['email'],
+                'google_id'   => $cached['google_id'],
+                'password'    => null,
+                'is_approved' => true,
+            ]);
+
+            $user->wallet()->create(['balance' => 0]);
         }
 
         $token = $user->createToken('api-google')->plainTextToken;
 
-        $userData = urlencode(json_encode($user->toApiArray()));
-
-        return redirect("{$frontendUrl}/auth/callback?token={$token}&user={$userData}");
+        return response()->json([
+            'message' => 'Verifikasi berhasil.',
+            'token'   => $token,
+            'user'    => $user->toApiArray(),
+        ]);
     }
 
     /**
-     * Buat username unik dari email Google.
-     * Contoh: "reza.pratama@gmail.com" → "rezapratama" → "rezapratama2" jika sudah ada.
+     * POST /api/auth/google/resend-otp
+     * Kirim ulang OTP ke email yang sama (throttle: hanya jika OTP lama belum kedaluwarsa).
      */
+    public function resendGoogleOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $email = $data['email'];
+
+        // Ambil data Google dari cache yang ada (tidak buat ulang Google OAuth)
+        $cached = Cache::get(self::CACHE_PREFIX . $email);
+
+        if (! $cached) {
+            return response()->json(['message' => 'Sesi Google sudah habis. Silakan ulangi login Google.'], 422);
+        }
+
+        // Generate OTP baru
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        Cache::put(self::CACHE_PREFIX . $email, array_merge($cached, ['otp' => $otp]), self::OTP_TTL);
+
+        try {
+            Mail::to($email)->send(new GoogleOtpMail($otp, $cached['name']));
+        } catch (\Throwable $e) {
+            \Log::warning('GoogleOTP resend mail failed: ' . $e->getMessage());
+        }
+
+        $response = ['message' => 'Kode OTP baru telah dikirim ke ' . $email . '.'];
+
+        if (config('app.env') === 'local') {
+            $response['dev_code'] = $otp;
+        }
+
+        return response()->json($response);
+    }
+
     private function uniqueUsername(string $email, ?string $name): string
     {
-        // Ambil bagian sebelum @ dari email, hapus karakter non-alphanumeric.
         $base = strtolower(preg_replace('/[^a-z0-9_]/i', '', explode('@', $email)[0]));
 
-        // Fallback ke nama jika base kosong.
         if (! $base && $name) {
             $base = strtolower(preg_replace('/[^a-z0-9_]/i', '', str_replace(' ', '_', $name)));
         }
