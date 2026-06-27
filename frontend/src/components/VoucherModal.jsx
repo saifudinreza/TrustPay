@@ -82,9 +82,10 @@ export default function VoucherModal({ onClose, onDone }) {
                 <div style={{ fontSize: 12, fontWeight: 600, color: T.inkSoft, marginBottom: 8 }}>Voucher tersedia:</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { code: 'WELCOME10', desc: 'Rp 10.000' },
-                    { code: 'BONUS50', desc: 'Rp 50.000' },
-                    { code: 'FREEBAL', desc: 'Rp 15.000' },
+                    { code: 'WELCOME10',  desc: 'Rp 10.000' },
+                    { code: 'RAMADHAN25', desc: 'Rp 25.000' },
+                    { code: 'BONUS50',    desc: 'Rp 50.000' },
+                    { code: 'FREEBAL',    desc: 'Rp 15.000' },
                   ].map(v => (
                     <button key={v.code} onClick={() => { setCode(v.code); setError(null) }} style={{ cursor: 'pointer', background: 'transparent', border: `1px dashed ${T.border2}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: T.ink, fontFamily: FONT.mono, fontSize: 13 }}>
                       <span style={{ color: T.goldBright, fontWeight: 600 }}>{v.code}</span>

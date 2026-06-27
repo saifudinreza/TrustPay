@@ -188,5 +188,16 @@ export default function useWallet() {
     }
   }, [balance])
 
-  return { hydrated, balance, transactions, lastUpdate, applyTransaction }
+  const refreshWallet = useCallback(async () => {
+    try {
+      const [walletRes, txRes] = await Promise.all([apiGet('/wallet'), apiGet('/transactions')])
+      setBalance(Number(walletRes.balance))
+      setTransactions((txRes.data ?? txRes).map(normalizeTx))
+      setLastUpdate(fmtTime(new Date()))
+    } catch (e) {
+      if (e?.status === 401) redirect401()
+    }
+  }, [redirect401])
+
+  return { hydrated, balance, transactions, lastUpdate, applyTransaction, refreshWallet }
 }

@@ -47,7 +47,7 @@ function printRegion(cls) {
 }
 
 export default function Dashboard() {
-  const { hydrated, balance, transactions, lastUpdate, applyTransaction } = useWallet()
+  const { hydrated, balance, transactions, lastUpdate, applyTransaction, refreshWallet } = useWallet()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -108,12 +108,10 @@ export default function Dashboard() {
   }
 
   // ---- VOUCHER ----
-  const onVoucherDone = async (res) => {
+  const onVoucherDone = async () => {
     setModal(null)
-    if (res?.wallet?.balance !== undefined) {
-      // Refresh wallet data after voucher redeem
-      window.location.reload()
-    }
+    await refreshWallet()
+    fireStamp()
   }
 
   // ---- TOP UP (tanpa PIN; sudah lewat gateway Midtrans) ----

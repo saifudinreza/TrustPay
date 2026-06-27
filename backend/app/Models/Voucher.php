@@ -21,7 +21,6 @@ class Voucher extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot('used_at')
-            ->withTimestamps();
+            ->withPivot('used_at');
     }
 }
