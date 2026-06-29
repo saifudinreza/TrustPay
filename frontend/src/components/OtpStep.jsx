@@ -108,7 +108,7 @@ export default function OtpStep({ phone, onVerify, onResend, onBack, submitting,
       )}
 
       {/* 6 kotak digit — onPaste di container agar menangkap paste di mana saja */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 22 }} onPaste={onPaste}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 22 }} onPaste={onPaste}>
         {digits.map((d, i) => (
           <input
             key={i}
@@ -163,8 +163,9 @@ const backBtn = {
 }
 
 const otpBox = {
-  flex: 1, minWidth: 0, height: 56, textAlign: 'center',
+  width: '100%', height: 56, textAlign: 'center',
+  boxSizing: 'border-box',
   borderRadius: 12, border: `1.5px solid ${T.border}`,
   background: T.surface2, outline: 'none',
-  fontFamily: FONT.mono, fontSize: 24, fontWeight: 600, color: T.ink,
+  fontFamily: FONT.mono, fontSize: 22, fontWeight: 600, color: T.ink,
 }

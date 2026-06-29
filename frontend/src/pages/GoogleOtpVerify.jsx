@@ -146,7 +146,7 @@ export default function GoogleOtpVerify() {
             )}
 
             {/* 6-digit OTP input */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 22 }} onPaste={onPaste}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 22 }} onPaste={onPaste}>
               {digits.map((d, i) => (
                 <input
                   key={i}
@@ -158,10 +158,11 @@ export default function GoogleOtpVerify() {
                   maxLength={1}
                   aria-label={`Digit ${i + 1}`}
                   style={{
-                    flex: 1, height: 58, textAlign: 'center',
+                    width: '100%', height: 56, textAlign: 'center',
+                    boxSizing: 'border-box',
                     borderRadius: 12, border: `1.5px solid ${d ? T.border2 : T.border}`,
                     background: T.surface2, outline: 'none',
-                    fontFamily: FONT.mono, fontSize: 26, fontWeight: 600, color: T.ink,
+                    fontFamily: FONT.mono, fontSize: 22, fontWeight: 600, color: T.ink,
                     transition: 'border-color .15s',
                   }}
                 />

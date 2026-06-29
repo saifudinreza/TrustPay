@@ -23,7 +23,17 @@ services:
       - key: QUEUE_CONNECTION
         value: sync
       - key: OTP_CHANNEL
-        value: log
+        value: mail
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_SCHEME
+        value: ""
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_FROM_NAME
+        value: TrustPay
       # Set these manually in Render dashboard (sensitive):
       # APP_KEY            → output of: php artisan key:generate --show
       # APP_URL            → https://trustpay-api.onrender.com  (isi setelah deploy)
@@ -31,11 +41,6 @@ services:
       # MIDTRANS_SERVER_KEY, MIDTRANS_CLIENT_KEY
       # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
       # GOOGLE_REDIRECT_URI → https://trustpay-api.onrender.com/api/auth/google/callback
-      # MAIL_MAILER        → smtp
-      # MAIL_SCHEME        → null
-      # MAIL_HOST          → smtp.gmail.com
-      # MAIL_PORT          → 587
       # MAIL_USERNAME      → donojomi@gmail.com
-      # MAIL_PASSWORD      → (app password gmail)
+      # MAIL_PASSWORD      → (app password gmail, tanpa spasi: 16 karakter)
       # MAIL_FROM_ADDRESS  → donojomi@gmail.com
-      # MAIL_FROM_NAME     → TrustPay
