@@ -26,7 +26,9 @@ export default function Login() {
 
   const [error, setError] = useState(() => {
     const p = new URLSearchParams(window.location.search)
-    return p.get('error') === 'google_gagal' ? 'Login dengan Google gagal. Silakan coba lagi.' : ''
+    if (p.get('error') === 'google_gagal') return 'Login dengan Google gagal. Silakan coba lagi.'
+    if (p.get('error') === 'otp_gagal') return 'Gagal mengirim OTP ke email. Pastikan SMTP sudah dikonfigurasi.'
+    return ''
   })
   const [submitting, setSubmitting] = useState(false)
 

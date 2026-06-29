@@ -54,11 +54,17 @@ class SocialAuthController extends Controller
         ], self::OTP_TTL);
 
         // Kirim OTP ke Gmail user
+        $mailSent = false;
         try {
             Mail::to($email)->send(new GoogleOtpMail($otp, $name));
+            $mailSent = true;
         } catch (\Throwable $e) {
-            // Jika gagal kirim, tetap lanjut — di dev mode kode tampil di UI
-            \Log::warning('GoogleOTP mail failed: ' . $e->getMessage());
+            \Log::error('GoogleOTP mail failed: ' . $e->getMessage());
+        }
+
+        // Jika kirim email gagal di production, redirect ke error
+        if (! $mailSent && config('app.env') !== 'local') {
+            return redirect("{$frontendUrl}/masuk?error=otp_gagal");
         }
 
         $params = '?email=' . urlencode($email);
