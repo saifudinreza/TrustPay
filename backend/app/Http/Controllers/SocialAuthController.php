@@ -62,8 +62,8 @@ class SocialAuthController extends Controller
             \Log::error('GoogleOTP mail failed: ' . $e->getMessage());
         }
 
-        // Jika kirim email gagal di production, redirect ke error
-        if (! $mailSent && config('app.env') !== 'local') {
+        // Jika kirim email gagal, redirect ke error (sertakan pesan untuk debug)
+        if (! $mailSent) {
             return redirect("{$frontendUrl}/masuk?error=otp_gagal");
         }
 
