@@ -6,7 +6,6 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use App\Services\OtpService;
-use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -85,30 +84,30 @@ class AuthController extends Controller
     }
 
     /**
-     * (BONUS) Minta OTP login via WhatsApp. Hanya untuk nomor yang sudah terdaftar.
+     * (BONUS) Minta OTP login via Email. Hanya untuk email yang sudah terdaftar.
      */
     public function requestLoginOtp(Request $request): JsonResponse
     {
         $request->validate(
-            ['phone' => ['required', 'string', 'min:9', 'max:20']],
-            ['phone.required' => 'Nomor HP wajib diisi.'],
+            ['email' => ['required', 'email']],
+            ['email.required' => 'Email wajib diisi.'],
         );
-        $phone = Phone::normalize($request->input('phone'));
+        $email = strtolower(trim($request->input('email')));
 
-        if (! User::where('phone', $phone)->exists()) {
-            return response()->json(['message' => 'Nomor HP belum terdaftar.'], 404);
+        if (! User::where('email', $email)->exists()) {
+            return response()->json(['message' => 'Email belum terdaftar.'], 404);
         }
-        if ($wait = $this->otp->retryAfter($phone)) {
+        if ($wait = $this->otp->retryAfter($email)) {
             return $this->throttled($wait);
         }
 
         try {
-            $code = $this->otp->send($phone, 'login');
+            $code = $this->otp->send($email, 'login');
         } catch (\Throwable $e) {
             return $this->deliveryFailed();
         }
 
-        return response()->json($this->sentPayload('Kode verifikasi dikirim ke WhatsApp kamu.', $phone, $code));
+        return response()->json($this->sentPayload('Kode verifikasi dikirim ke email kamu.', $email, $code));
     }
 
     /**
@@ -117,19 +116,19 @@ class AuthController extends Controller
     public function verifyOtp(Request $request): JsonResponse
     {
         $request->validate([
-            'phone' => ['required', 'string', 'min:9', 'max:20'],
+            'email' => ['required', 'email'],
             'code'  => ['required', 'string', 'size:6'],
         ], [
             'code.size' => 'Kode OTP terdiri dari 6 digit.',
         ]);
 
-        $phone = Phone::normalize($request->input('phone'));
+        $email = strtolower(trim($request->input('email')));
 
-        if (! $this->otp->verify($phone, $request->input('code'))) {
+        if (! $this->otp->verify($email, $request->input('code'))) {
             return response()->json(['message' => 'Kode OTP salah atau kedaluwarsa.'], 422);
         }
 
-        $user = User::where('phone', $phone)->first();
+        $user = User::where('email', $email)->first();
         if (! $user) {
             return response()->json(['message' => 'Akun tidak ditemukan.'], 404);
         }
@@ -180,10 +179,10 @@ class AuthController extends Controller
         ], 429);
     }
 
-    // dev_code hanya disertakan saat APP_ENV=local (tidak ada SMS/WA nyata).
-    private function sentPayload(string $message, string $phone, string $code): array
+    // dev_code hanya disertakan saat APP_ENV=local (tidak ada email nyata di dev).
+    private function sentPayload(string $message, string $email, string $code): array
     {
-        $payload = ['message' => $message, 'phone' => $phone];
+        $payload = ['message' => $message, 'email' => $email];
         if (app()->environment('local')) {
             $payload['dev_code'] = $code;
         }

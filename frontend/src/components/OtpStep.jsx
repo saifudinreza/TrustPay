@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeftIcon } from './icons.jsx'
-import { prettyPhone } from '../lib/auth.js'
 import { T, FONT } from '../lib/theme.js'
 
 /**
@@ -92,7 +91,7 @@ export default function OtpStep({ phone, onVerify, onResend, onBack, submitting,
       </h1>
       <div style={{ height: 3, width: 44, background: T.btnGrad, borderRadius: 2, marginBottom: 16 }} />
       <p style={{ fontSize: 14, color: T.muted, margin: '0 0 22px', lineHeight: 1.5 }}>
-        Kami mengirim 6 digit kode ke <strong style={{ color: T.ink }}>{prettyPhone(phone)}</strong>.
+        Kami mengirim 6 digit kode ke <strong style={{ color: T.ink }}>{phone}</strong>.
       </p>
 
       {/* Badge kode OTP untuk dev — tidak muncul di production */}
@@ -164,7 +163,7 @@ const backBtn = {
 }
 
 const otpBox = {
-  width: '100%', height: 56, textAlign: 'center',
+  flex: 1, minWidth: 0, height: 56, textAlign: 'center',
   borderRadius: 12, border: `1.5px solid ${T.border}`,
   background: T.surface2, outline: 'none',
   fontFamily: FONT.mono, fontSize: 24, fontWeight: 600, color: T.ink,

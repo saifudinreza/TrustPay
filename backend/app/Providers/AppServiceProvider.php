@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\OtpChannel;
 use App\Services\Otp\FonnteOtpChannel;
 use App\Services\Otp\LogOtpChannel;
+use App\Services\Otp\MailOtpChannel;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
 
             // Fonnte (WhatsApp) — but fall back to the log channel if no token is
             // configured yet, so the app never breaks while you're setting it up.
+            if ($channel === 'mail') {
+                return new MailOtpChannel();
+            }
+
             if ($channel === 'fonnte' && $fonnteToken) {
                 return new FonnteOtpChannel($fonnteToken);
             }

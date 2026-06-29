@@ -2,19 +2,18 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell.jsx'
 import OtpStep from '../components/OtpStep.jsx'
-import { UserIcon, LockIcon, PhoneIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
+import { UserIcon, LockIcon, MailIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
 import useAuth from '../hooks/useAuth.js'
-import { phoneShapeValid } from '../lib/auth.js'
 import { T, FONT } from '../lib/theme.js'
 
 const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/redirect'
 
 // Halaman Login. METODE UTAMA (rubrik): email/username + password.
-// METODE BONUS: OTP WhatsApp (toggle di bawah). State `mode` mengatur tampilannya.
+// METODE BONUS: OTP Email (toggle di bawah). State `mode` mengatur tampilannya.
 export default function Login() {
   const navigate = useNavigate()
   const { login, requestLoginOtp, verifyOtp } = useAuth()
-  const [mode, setMode] = useState('password') // 'password' | 'otp-phone' | 'otp-code'
+  const [mode, setMode] = useState('password') // 'password' | 'otp-email' | 'otp-code'
 
   // ---- state form password ----
   const [identifier, setIdentifier] = useState('')
@@ -22,25 +21,24 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
 
   // ---- state OTP ----
-  const [phone, setPhone] = useState('')
+  const [otpEmail, setOtpEmail] = useState('')
   const [devCode, setDevCode] = useState(null)
 
   const [error, setError] = useState(() => {
-    // Tampilkan pesan jika Google OAuth gagal (redirect dari /masuk?error=google_gagal)
     const p = new URLSearchParams(window.location.search)
     return p.get('error') === 'google_gagal' ? 'Login dengan Google gagal. Silakan coba lagi.' : ''
   })
   const [submitting, setSubmitting] = useState(false)
 
   const canSubmitPwd = identifier.trim() !== '' && password !== '' && !submitting
-  const phoneValid = phoneShapeValid(phone)
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail.trim())
 
   // LOGIN dengan password
   const onPwdSubmit = async (e) => {
     e.preventDefault()
     if (!canSubmitPwd) return
     setError('')
-    setSubmitting(true) // loading → cegah spam klik
+    setSubmitting(true)
     try {
       await login({ login: identifier, password })
       navigate('/dashboard')
@@ -50,12 +48,12 @@ export default function Login() {
     }
   }
 
-  // BONUS: kirim OTP ke WhatsApp
+  // BONUS: kirim OTP ke Email
   const sendOtp = async () => {
     setError('')
     setSubmitting(true)
     try {
-      const data = await requestLoginOtp({ phone })
+      const data = await requestLoginOtp({ email: otpEmail.trim() })
       setDevCode(data.dev_code || null)
       setMode('otp-code')
     } catch (err) {
@@ -70,7 +68,7 @@ export default function Login() {
     setError('')
     setSubmitting(true)
     try {
-      await verifyOtp({ phone, code })
+      await verifyOtp({ email: otpEmail.trim(), code })
       navigate('/dashboard')
     } catch (err) {
       setError(err?.data?.message || 'Kode OTP salah atau kedaluwarsa.')
@@ -109,8 +107,8 @@ export default function Login() {
 
           <div style={dividerWrap}><span style={dividerLine} /><span style={dividerText}>atau</span><span style={dividerLine} /></div>
 
-          <button type="button" onClick={() => { setMode('otp-phone'); setError('') }} style={altBtn}>
-            <PhoneIcon size={16} /> Masuk dengan OTP WhatsApp
+          <button type="button" onClick={() => { setMode('otp-email'); setError('') }} style={altBtn}>
+            <MailIcon size={16} /> Masuk dengan OTP Email
           </button>
 
           <a href={GOOGLE_AUTH_URL} style={{ ...altBtn, textDecoration: 'none', color: T.ink }}>
@@ -124,22 +122,22 @@ export default function Login() {
         </form>
       )}
 
-      {/* ===== BONUS: minta OTP via nomor HP ===== */}
-      {mode === 'otp-phone' && (
-        <form onSubmit={(e) => { e.preventDefault(); if (phoneValid && !submitting) sendOtp() }} style={{ width: '100%', maxWidth: 380 }}>
-          <h1 style={titleStyle}>Masuk via WhatsApp</h1>
+      {/* ===== BONUS: minta OTP via Email ===== */}
+      {mode === 'otp-email' && (
+        <form onSubmit={(e) => { e.preventDefault(); if (emailValid && !submitting) sendOtp() }} style={{ width: '100%', maxWidth: 380 }}>
+          <h1 style={titleStyle}>Masuk via Email OTP</h1>
           <div style={ruleStyle} />
-          <p style={{ fontSize: 14, color: T.muted, margin: '0 0 22px' }}>Masukkan nomor HP terdaftar, kami kirim kode OTP via WhatsApp.</p>
+          <p style={{ fontSize: 14, color: T.muted, margin: '0 0 22px' }}>Masukkan email terdaftar, kami kirim kode OTP ke Gmail kamu.</p>
 
           {error && <div role="alert" style={alertStyle}>{error}</div>}
 
-          <label style={fieldLabel}>Nomor HP</label>
+          <label style={fieldLabel}>Email</label>
           <div style={{ position: 'relative' }}>
-            <span style={leadIcon}><PhoneIcon size={18} /></span>
-            <input value={phone} onChange={(e) => { setPhone(e.target.value); setError('') }} placeholder="0812-3456-7890" inputMode="tel" autoComplete="tel" autoFocus style={{ ...inputStyle, paddingLeft: 44 }} />
+            <span style={leadIcon}><MailIcon size={18} /></span>
+            <input value={otpEmail} onChange={(e) => { setOtpEmail(e.target.value); setError('') }} placeholder="nama@gmail.com" inputMode="email" autoComplete="email" autoFocus style={{ ...inputStyle, paddingLeft: 44 }} />
           </div>
 
-          <button type="submit" disabled={!phoneValid || submitting} className={phoneValid && !submitting ? 'cta-gold' : undefined} style={primaryBtn(phoneValid && !submitting)}>
+          <button type="submit" disabled={!emailValid || submitting} className={emailValid && !submitting ? 'cta-gold' : undefined} style={primaryBtn(emailValid && !submitting)}>
             {submitting ? 'Mengirim…' : 'Kirim Kode OTP'}
           </button>
 
@@ -150,13 +148,13 @@ export default function Login() {
       {/* ===== BONUS: input OTP ===== */}
       {mode === 'otp-code' && (
         <OtpStep
-          phone={phone}
+          phone={otpEmail}
           devCode={devCode}
           error={error}
           submitting={submitting}
           onVerify={onVerify}
           onResend={sendOtp}
-          onBack={() => { setMode('otp-phone'); setError(''); setDevCode(null) }}
+          onBack={() => { setMode('otp-email'); setError(''); setDevCode(null) }}
         />
       )}
     </AuthShell>

@@ -67,15 +67,15 @@ export default function useAuth() {
    * (BONUS) Minta OTP ke WhatsApp untuk nomor yang terdaftar.
    * Mengembalikan { message, dev_code? } — dev_code hanya ada di APP_ENV=local.
    */
-  const requestLoginOtp = useCallback(async ({ phone }) => {
-    return apiPost('/login/request-otp', { phone })
+  const requestLoginOtp = useCallback(async ({ email }) => {
+    return apiPost('/login/request-otp', { email })
   }, [])
 
   /**
    * (BONUS) Verifikasi OTP 6 digit → terima token dari backend → simpan sesi.
    */
-  const verifyOtp = useCallback(async ({ phone, code }) => {
-    const data = await apiPost('/verify-otp', { phone, code })
+  const verifyOtp = useCallback(async ({ email, code }) => {
+    const data = await apiPost('/verify-otp', { email, code })
     setSession(data.token, data.user)
     setUser(data.user)
     return data.user
