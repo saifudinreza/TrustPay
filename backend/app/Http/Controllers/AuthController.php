@@ -15,10 +15,10 @@ use Illuminate\Support\Facades\Hash;
  *
  * Alur UTAMA (sesuai rubrik): register & login pakai email/username + password,
  * keduanya mengembalikan Sanctum token.
- * Alur BONUS: login tanpa password via OTP WhatsApp (requestLoginOtp + verifyOtp).
+ * Alur BONUS: login tanpa password via OTP Email (requestLoginOtp + verifyOtp).
  *
  * OtpService di-inject lewat constructor (dependency injection) supaya controller
- * tidak tahu detail pengiriman OTP — implementasinya bisa diganti (log/Fonnte).
+ * tidak tahu detail pengiriman OTP — implementasinya bisa diganti (log/mail/Fonnte).
  */
 class AuthController extends Controller
 {
