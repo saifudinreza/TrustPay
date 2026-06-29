@@ -1,41 +1,29 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../components/AuthShell.jsx'
-import OtpStep from '../components/OtpStep.jsx'
-import { UserIcon, LockIcon, MailIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
+import { UserIcon, LockIcon, EyeIcon, EyeOffIcon, GoogleIcon } from '../components/icons.jsx'
 import useAuth from '../hooks/useAuth.js'
 import { T, FONT } from '../lib/theme.js'
 
 const GOOGLE_AUTH_URL = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/redirect'
 
-// Halaman Login. METODE UTAMA (rubrik): email/username + password.
-// METODE BONUS: OTP Email (toggle di bawah). State `mode` mengatur tampilannya.
 export default function Login() {
   const navigate = useNavigate()
-  const { login, requestLoginOtp, verifyOtp } = useAuth()
-  const [mode, setMode] = useState('password') // 'password' | 'otp-email' | 'otp-code'
+  const { login } = useAuth()
 
-  // ---- state form password ----
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
 
-  // ---- state OTP ----
-  const [otpEmail, setOtpEmail] = useState('')
-  const [devCode, setDevCode] = useState(null)
-
   const [error, setError] = useState(() => {
     const p = new URLSearchParams(window.location.search)
     if (p.get('error') === 'google_gagal') return 'Login dengan Google gagal. Silakan coba lagi.'
-    if (p.get('error') === 'otp_gagal') return 'Gagal mengirim OTP ke email. Pastikan SMTP sudah dikonfigurasi.'
     return ''
   })
   const [submitting, setSubmitting] = useState(false)
 
   const canSubmitPwd = identifier.trim() !== '' && password !== '' && !submitting
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail.trim())
 
-  // LOGIN dengan password
   const onPwdSubmit = async (e) => {
     e.preventDefault()
     if (!canSubmitPwd) return
@@ -50,115 +38,44 @@ export default function Login() {
     }
   }
 
-  // BONUS: kirim OTP ke Email
-  const sendOtp = async () => {
-    setError('')
-    setSubmitting(true)
-    try {
-      const data = await requestLoginOtp({ email: otpEmail.trim() })
-      setDevCode(data.dev_code || null)
-      setMode('otp-code')
-    } catch (err) {
-      setError(err?.data?.message || 'Gagal mengirim OTP.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  // BONUS: verifikasi OTP
-  const onVerify = async (code) => {
-    setError('')
-    setSubmitting(true)
-    try {
-      await verifyOtp({ email: otpEmail.trim(), code })
-      navigate('/dashboard')
-    } catch (err) {
-      setError(err?.data?.message || 'Kode OTP salah atau kedaluwarsa.')
-      setSubmitting(false)
-    }
-  }
-
   return (
     <AuthShell tagline={'"Setiap rupiah tercatat,\nsetiap waktu."'}>
-      {/* ===== METODE UTAMA: email/username + password ===== */}
-      {mode === 'password' && (
-        <form onSubmit={onPwdSubmit} className="auth-form-enter" style={{ width: '100%', maxWidth: 380 }}>
-          <h1 style={titleStyle}>Masuk ke Wallet</h1>
-          <div style={ruleStyle} />
+      <form onSubmit={onPwdSubmit} className="auth-form-enter" style={{ width: '100%', maxWidth: 380 }}>
+        <h1 style={titleStyle}>Masuk ke Wallet</h1>
+        <div style={ruleStyle} />
 
-          {error && <div role="alert" style={alertStyle}>{error}</div>}
+        {error && <div role="alert" style={alertStyle}>{error}</div>}
 
-          <label style={fieldLabel}>Email atau Username</label>
-          <div style={{ position: 'relative' }}>
-            <span style={leadIcon}><UserIcon size={18} /></span>
-            <input value={identifier} onChange={(e) => { setIdentifier(e.target.value); setError('') }} placeholder="nama@email.com / @username" autoComplete="username" autoFocus style={{ ...inputStyle, paddingLeft: 44 }} />
-          </div>
+        <label style={fieldLabel}>Email atau Username</label>
+        <div style={{ position: 'relative' }}>
+          <span style={leadIcon}><UserIcon size={18} /></span>
+          <input value={identifier} onChange={(e) => { setIdentifier(e.target.value); setError('') }} placeholder="nama@email.com / @username" autoComplete="username" autoFocus style={{ ...inputStyle, paddingLeft: 44 }} />
+        </div>
 
-          <label style={{ ...fieldLabel, marginTop: 18 }}>Password</label>
-          <div style={{ position: 'relative' }}>
-            <span style={leadIcon}><LockIcon size={18} /></span>
-            <input type={showPass ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} placeholder="••••••••" autoComplete="current-password" style={{ ...inputStyle, paddingLeft: 44, paddingRight: 46 }} />
-            <button type="button" onClick={() => setShowPass((s) => !s)} aria-label={showPass ? 'Sembunyikan' : 'Tampilkan'} style={eyeBtn}>
-              {showPass ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
-            </button>
-          </div>
-
-          <button type="submit" disabled={!canSubmitPwd} className={canSubmitPwd ? 'cta-gold' : undefined} style={primaryBtn(canSubmitPwd)}>
-            {submitting ? 'Memproses…' : 'Masuk'}
+        <label style={{ ...fieldLabel, marginTop: 18 }}>Password</label>
+        <div style={{ position: 'relative' }}>
+          <span style={leadIcon}><LockIcon size={18} /></span>
+          <input type={showPass ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} placeholder="••••••••" autoComplete="current-password" style={{ ...inputStyle, paddingLeft: 44, paddingRight: 46 }} />
+          <button type="button" onClick={() => setShowPass((s) => !s)} aria-label={showPass ? 'Sembunyikan' : 'Tampilkan'} style={eyeBtn}>
+            {showPass ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
           </button>
+        </div>
 
-          <div style={dividerWrap}><span style={dividerLine} /><span style={dividerText}>atau</span><span style={dividerLine} /></div>
+        <button type="submit" disabled={!canSubmitPwd} className={canSubmitPwd ? 'cta-gold' : undefined} style={primaryBtn(canSubmitPwd)}>
+          {submitting ? 'Memproses…' : 'Masuk'}
+        </button>
 
-          <button type="button" onClick={() => { setMode('otp-email'); setError('') }} style={altBtn}>
-            <MailIcon size={16} /> Masuk dengan OTP Email
-          </button>
+        <div style={dividerWrap}><span style={dividerLine} /><span style={dividerText}>atau</span><span style={dividerLine} /></div>
 
-          <a href={GOOGLE_AUTH_URL} style={{ ...altBtn, textDecoration: 'none', color: T.ink }}>
-            <GoogleIcon size={18} /> Lanjutkan dengan Google
-          </a>
+        <a href={GOOGLE_AUTH_URL} style={{ ...altBtn, textDecoration: 'none', color: T.ink }}>
+          <GoogleIcon size={18} /> Lanjutkan dengan Google
+        </a>
 
-          <p style={footStyle}>
-            Belum punya akun?{' '}
-            <Link to="/daftar" style={linkStyle}>Daftar</Link>
-          </p>
-        </form>
-      )}
-
-      {/* ===== BONUS: minta OTP via Email ===== */}
-      {mode === 'otp-email' && (
-        <form onSubmit={(e) => { e.preventDefault(); if (emailValid && !submitting) sendOtp() }} style={{ width: '100%', maxWidth: 380 }}>
-          <h1 style={titleStyle}>Masuk via Email OTP</h1>
-          <div style={ruleStyle} />
-          <p style={{ fontSize: 14, color: T.muted, margin: '0 0 22px' }}>Masukkan email terdaftar, kami kirim kode OTP ke Gmail kamu.</p>
-
-          {error && <div role="alert" style={alertStyle}>{error}</div>}
-
-          <label style={fieldLabel}>Email</label>
-          <div style={{ position: 'relative' }}>
-            <span style={leadIcon}><MailIcon size={18} /></span>
-            <input value={otpEmail} onChange={(e) => { setOtpEmail(e.target.value); setError('') }} placeholder="nama@gmail.com" inputMode="email" autoComplete="email" autoFocus style={{ ...inputStyle, paddingLeft: 44 }} />
-          </div>
-
-          <button type="submit" disabled={!emailValid || submitting} className={emailValid && !submitting ? 'cta-gold' : undefined} style={primaryBtn(emailValid && !submitting)}>
-            {submitting ? 'Mengirim…' : 'Kirim Kode OTP'}
-          </button>
-
-          <button type="button" onClick={() => { setMode('password'); setError('') }} style={altBtn}>← Pakai password</button>
-        </form>
-      )}
-
-      {/* ===== BONUS: input OTP ===== */}
-      {mode === 'otp-code' && (
-        <OtpStep
-          phone={otpEmail}
-          devCode={devCode}
-          error={error}
-          submitting={submitting}
-          onVerify={onVerify}
-          onResend={sendOtp}
-          onBack={() => { setMode('otp-email'); setError(''); setDevCode(null) }}
-        />
-      )}
+        <p style={footStyle}>
+          Belum punya akun?{' '}
+          <Link to="/daftar" style={linkStyle}>Daftar</Link>
+        </p>
+      </form>
     </AuthShell>
   )
 }
