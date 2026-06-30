@@ -4,24 +4,28 @@
 | Item | Detail |
 |---|---|
 | Author | Saifudin Reza |
-| Versi | 2.0 |
-| Tanggal | 26 Juni 2026 |
+| Versi | 3.0 |
+| Tanggal | 30 Juni 2026 |
 | Deadline | 27 Juni 2026, 23.50 WIB |
 
 ---
 
 ## 1. Ringkasan Produk
 
-TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabungan Digital** — setiap rupiah tercatat secara permanen layaknya buku tabungan bank. Pengguna dapat melakukan top up saldo, transfer antar pengguna, bayar tagihan (Pulsa/PLN/PDAM/Internet), scan & bayar QRIS, redeem voucher, dan mendapatkan cashback dari setiap transaksi.
+TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabungan Digital** — setiap rupiah tercatat secara permanen layaknya buku tabungan bank. Pengguna dapat melakukan top up saldo, transfer antar pengguna, bayar tagihan (Pulsa/PLN/PDAM/Internet), dan scan & bayar QRIS.
+
+**Live Demo:**
+- Frontend: https://trust-pay-blush.vercel.app
+- Backend API: https://trustpay-api-ieep.onrender.com
 
 ---
 
 ## 2. Tujuan
 
 1. Membangun sistem dompet digital dengan integritas transaksi penuh (atomic, rollback-safe).
-2. Menyediakan autentikasi aman (Laravel Sanctum + Google OAuth + OTP WhatsApp).
+2. Menyediakan autentikasi aman (Laravel Sanctum + Google OAuth + OTP Email).
 3. Menyediakan dashboard SPA real-time dengan React.
-4. Mengintegrasikan fitur promo, cashback, dan voucher untuk engagement pengguna.
+4. Mengintegrasikan Midtrans Snap sebagai payment gateway top up.
 5. Mendemonstrasikan kemampuan full stack: Laravel API, React SPA, integrasi pihak ketiga.
 
 ---
@@ -30,49 +34,42 @@ TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabu
 
 | Layer | Teknologi |
 |---|---|
-| Backend | Laravel 13, PHP 8.3 |
-| Database | MySQL (SQLite fallback) |
-| Auth | Sanctum (token/cookie), Socialite (Google OAuth), OTP WhatsApp (Fonnte) |
-| Payment Gateway | Midtrans Snap (sandbox/production) |
-| Frontend | React 18, Vite 5, Tailwind CSS 3 |
-| Deployment BE | Docker / Render |
+| Backend | Laravel 11, PHP 8.4 |
+| Database | PostgreSQL (production via Neon) / MySQL (local) |
+| Auth | Sanctum (token), Socialite (Google OAuth), OTP Email (Brevo SMTP) |
+| Payment Gateway | Midtrans Snap (sandbox) |
+| Frontend | React 18, Vite 5, inline styles (design tokens) |
+| Deployment BE | Docker / Render.com |
 | Deployment FE | Vercel |
+| Email | Brevo SMTP relay |
 
 ---
 
 ## 4. Fitur-Fitur
 
 ### 4.1 Autentikasi
-- Register: name, username, email, phone (opsional), password
+- Register: name, username, email, password
 - Login: email/username + password → token Sanctum
-- OTP WhatsApp (bonus): login tanpa password via kode OTP
-- Google OAuth (bonus): login satu klik via Google
-- Atur PIN transaksi 6 digit
+- OTP Email (bonus): login tanpa password via kode OTP ke Gmail
+- Google OAuth (bonus): login satu klik via Google → langsung masuk dashboard
+- Atur & ubah PIN transaksi 6 digit
+- Update profil (nama, username, email)
 
 ### 4.2 Dompet Digital (Wallet)
 - Cek saldo real-time
 - Top up saldo (**Direct Mode** untuk demo, **Midtrans Snap** untuk production)
-- Transfer antar pengguna (via email/username/phone)
-- Riwayat transaksi (filter, cari, export CSV, cetak PDF)
+- Transfer antar pengguna (via email/username)
+- Bayar tagihan: Pulsa, Listrik PLN, Air PDAM, Internet
+- Riwayat transaksi lengkap
 
-### 4.3 Pembayaran Tagihan
-- Pulsa, Listrik PLN, Air PDAM, Internet
-- Potong saldo langsung dengan verifikasi PIN
-
-### 4.4 QRIS
+### 4.3 QRIS
 - **Scan QRIS**: kamera langsung (BarcodeDetector API) baca QRIS merchant → bayar otomatis
 - Demo mode untuk browser yang tidak mendukung kamera
 - **Terima QR**: generate QR untuk menerima transfer
 
-### 4.5 Promo & Cashback
-- Cashback 10% untuk transfer sesama TrustPay (maks Rp 50.000)
-- Cashback 5% untuk bayar tagihan (maks Rp 25.000)
-- Cashback otomatis masuk ke saldo sebagai transaksi TOPUP
-
-### 4.6 Voucher
-- Redeem kode voucher untuk saldo gratis
-- Validasi: kode aktif, belum kadaluarsa, kuota tersedia, belum pernah dipakai
-- Voucher contoh: `WELCOME10` (Rp 10.000), `BONUS50` (Rp 50.000), `FREEBAL` (Rp 15.000)
+### 4.4 Keamanan Transaksi
+- PIN 6 digit wajib untuk setiap transfer dan pembayaran
+- Token disimpan di cookie (SameSite=Strict) bukan localStorage
 
 ---
 
@@ -81,7 +78,6 @@ TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabu
 ```
 users (1) ────── (1) wallets
 users (1) ────── (n) transactions
-users (n) ────── (n) vouchers  [pivot: user_voucher]
 ```
 
 ### Tabel `users`
@@ -91,10 +87,10 @@ users (n) ────── (n) vouchers  [pivot: user_voucher]
 | name | string | |
 | username | string, unique | |
 | email | string, unique | |
-| phone | string, nullable, unique | |
-| password | string (hashed) | nullable (untuk user OTP) |
+| password | string (hashed), nullable | nullable untuk user Google OAuth |
 | pin | string (hashed), nullable | PIN 6 digit untuk transaksi |
 | google_id | string, nullable | ID dari Google OAuth |
+| is_approved | boolean, default true | |
 | created_at / updated_at | timestamp | |
 
 ### Tabel `wallets`
@@ -113,31 +109,12 @@ users (n) ────── (n) vouchers  [pivot: user_voucher]
 | transfer_code | uuid, nullable | pengikat pasangan TRANSFER_OUT ↔ TRANSFER_IN |
 | user_id | bigint, FK | pemilik baris ledger |
 | counterpart_user_id | bigint, FK, nullable | lawan transaksi |
-| type | enum(TOPUP,TRANSFER_IN,TRANSFER_OUT) | |
-| status | enum(PENDING,SUCCESS,FAILED) | khusus TOPUP via Midtrans |
+| type | enum(TOPUP,TRANSFER_IN,TRANSFER_OUT,PAYMENT) | |
+| status | enum(PENDING,SUCCESS,FAILED) | |
 | amount | decimal(15,2) | selalu positif |
 | balance_after | decimal(15,2), nullable | saldo setelah transaksi |
 | description | string, nullable | |
 | created_at / updated_at | timestamp | |
-
-### Tabel `vouchers`
-| Kolom | Tipe | Keterangan |
-|---|---|---|
-| id | bigint, PK | |
-| code | string(32), unique | kode redeem |
-| value | decimal(15,2) | nominal saldo |
-| max_uses | integer, nullable | kuota global (null = tak terbatas) |
-| max_uses_per_user | integer, default 1 | |
-| expires_at | timestamp, nullable | |
-| is_active | boolean | |
-| description | string, nullable | |
-
-### Tabel `user_voucher` (pivot)
-| Kolom | Tipe |
-|---|---|
-| user_id | bigint, FK |
-| voucher_id | bigint, FK |
-| used_at | timestamp |
 
 ---
 
@@ -147,10 +124,10 @@ users (n) ────── (n) vouchers  [pivot: user_voucher]
 |---|---|---|---|
 | POST | `/api/register` | ✗ | Daftar akun baru |
 | POST | `/api/login` | ✗ | Login email/username + password |
-| POST | `/api/login/request-otp` | ✗ | Minta OTP WhatsApp |
-| POST | `/api/verify-otp` | ✗ | Verifikasi OTP |
+| POST | `/api/login/request-otp` | ✗ | Minta OTP ke Email |
+| POST | `/api/verify-otp` | ✗ | Verifikasi OTP Email |
 | GET | `/api/auth/google/redirect` | ✗ | Redirect ke Google OAuth |
-| GET | `/api/auth/google/callback` | ✗ | Callback Google OAuth |
+| GET | `/api/auth/google/callback` | ✗ | Callback Google → langsung terbit token |
 | POST | `/api/logout` | ✓ | Hapus sesi |
 | GET | `/api/me` | ✓ | Data user saat ini |
 | PUT | `/api/me` | ✓ | Update profil |
@@ -161,8 +138,6 @@ users (n) ────── (n) vouchers  [pivot: user_voucher]
 | POST | `/api/transfer` | ✓ | Transfer ke user lain |
 | POST | `/api/pay` | ✓ | Bayar tagihan |
 | GET | `/api/transactions` | ✓ | Riwayat transaksi |
-| GET | `/api/promos` | ✓ | Daftar promo aktif |
-| POST | `/api/vouchers/redeem` | ✓ | Redeem kode voucher |
 | POST | `/webhooks/midtrans` | ✗ | Webhook Midtrans |
 
 **Catatan:** Semua endpoint yang dilindungi auth menggunakan middleware `auth:sanctum`.
@@ -180,12 +155,15 @@ users (n) ────── (n) vouchers  [pivot: user_voucher]
 1. User input penerima + nominal + PIN → `POST /transfer`
 2. Backend lock wallet sender → validasi saldo → debit sender → kredit recipient
 3. Semua dalam satu DB transaction (atomic rollback)
-4. Jika eligible → cashback otomatis masuk ke sender
 
-### Redeem Voucher
-1. User input kode → `POST /vouchers/redeem`
-2. Validasi: kode ada, aktif, belum expired, kuota tersisa, belum dipakai user
-3. Saldo bertambah + catat transaksi TOPUP + tandai pivot
+### Bayar Tagihan
+1. User pilih jenis tagihan + nominal + PIN → `POST /pay`
+2. Backend validasi saldo → potong saldo → catat transaksi PAYMENT
+
+### Google OAuth
+1. User klik "Lanjutkan dengan Google" → redirect ke Google
+2. Google callback → backend cari/buat user → terbit token Sanctum
+3. Redirect ke `/auth/callback?token=...&user=...` → frontend simpan sesi → dashboard
 
 ---
 
@@ -195,10 +173,9 @@ users (n) ────── (n) vouchers  [pivot: user_voucher]
 # Backend
 cd backend
 composer install
-cp .env.example .env   # lalu edit konfigurasi database & Midtrans
+cp .env.example .env   # edit DB, Midtrans, Google OAuth, Mail (Brevo)
 php artisan key:generate
 php artisan migrate
-php artisan db:seed
 php artisan serve
 
 # Frontend
@@ -207,13 +184,26 @@ npm install
 npm run dev
 ```
 
-### Voucher Demo (Seeder)
-| Kode | Nilai | Kuota |
+### Akun Demo
+| Email | Password | Saldo Awal |
 |---|---|---|
-| WELCOME10 | Rp 10.000 | 100 |
-| RAMADHAN25 | Rp 25.000 | 50 |
-| BONUS50 | Rp 50.000 | 20 |
-| FREEBAL | Rp 15.000 | ∞ |
+| donojomi@gmail.com | password123 | Rp 500.000 |
+| demo@trustpay.id | password123 | Rp 250.000 |
+
+### Environment Variables Penting (Render)
+| Key | Keterangan |
+|---|---|
+| `APP_ENV` | `production` |
+| `DB_CONNECTION` | `pgsql` |
+| `GOOGLE_CLIENT_ID` | Client ID dari Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | Client Secret Google |
+| `MAIL_HOST` | `smtp-relay.brevo.com` |
+| `MAIL_PORT` | `587` |
+| `MAIL_USERNAME` | Login Brevo |
+| `MAIL_PASSWORD` | SMTP Key Brevo |
+| `MIDTRANS_SERVER_KEY` | Key Midtrans sandbox |
+| `OTP_CHANNEL` | `mail` |
+| `DIRECT_TOPUP_ENABLED` | `true` (demo) |
 
 ---
 
@@ -225,7 +215,6 @@ npm run dev
 | Kosong | 422 — "Nominal tidak boleh kosong." |
 | Huruf/simbol | 422 — "Nominal harus berupa angka." |
 | Negatif | 422 — "Nominal tidak boleh negatif." |
-| Desimal | 422 — "Nominal harus berupa bilangan bulat." |
 | Melebihi batas | 422 — "Nominal melebihi batas maksimum transaksi." |
 | Saldo tidak cukup | 400 — "Saldo tidak cukup." |
 
@@ -237,15 +226,6 @@ npm run dev
 | PIN salah | 422 — "PIN salah." |
 | PIN belum diatur | 403 — "Atur PIN transaksi terlebih dahulu." |
 
-### Voucher
-| Skenario | Respon |
-|---|---|
-| Kode tidak ditemukan | 404 — "Kode voucher tidak ditemukan." |
-| Voucher tidak aktif | 400 — "Voucher sudah tidak aktif." |
-| Voucher kedaluwarsa | 400 — "Voucher sudah kedaluwarsa." |
-| Kuota habis | 400 — "Kuota voucher sudah habis." |
-| Sudah pernah pakai | 400 — "Kamu sudah pernah menggunakan voucher ini." |
-
 ---
 
 ## 10. Arsitektur Keamanan
@@ -254,8 +234,8 @@ npm run dev
 - **Row-level locking**: `lockForUpdate()` pada wallet saat transfer mencegah race condition
 - **Atomic transaction**: semua transaksi keuangan dalam `DB::transaction` — rollback otomatis jika ada kegagalan
 - **PIN transaksi**: setiap transfer/pay wajib verifikasi PIN 6 digit (bcrypt)
-- **Authorization**: user hanya bisa akses data milik sendiri (`where user_id = auth()->id()`)
-- **Token di cookie**: token disimpan di cookie (SameSite=Strict) bukan localStorage, lebih aman dari XSS
+- **Authorization**: user hanya bisa akses data milik sendiri
+- **Token di cookie**: token disimpan di cookie (SameSite=Strict) bukan localStorage
 
 ---
 
@@ -281,69 +261,67 @@ npm run dev
 ### Backend (`backend/`)
 ```
 app/Http/Controllers/
-├── AuthController.php        # Register, Login, Logout, OTP
-├── WalletController.php      # Wallet, TopUp, Transfer, Pay, Promo, Voucher
-├── ProfileController.php     # Update profil, PIN
-├── SocialAuthController.php  # Google OAuth
+├── AuthController.php            # Register, Login, Logout, OTP Email
+├── WalletController.php          # Wallet, TopUp, Transfer, Pay
+├── ProfileController.php         # Update profil, PIN
+├── SocialAuthController.php      # Google OAuth (direct token)
 ├── MidtransWebhookController.php
 
 app/Services/
-├── WalletService.php          # Logic bisnis wallet + cashback
-├── OtpService.php             # Logic OTP WhatsApp
+├── WalletService.php             # Logic bisnis wallet
+├── OtpService.php                # Logic OTP Email
+app/Services/Otp/
+├── MailOtpChannel.php            # Kirim OTP via SMTP (Brevo)
+├── LogOtpChannel.php             # Fallback log (dev)
 
 app/Models/
 ├── User.php
 ├── Wallet.php
 ├── Transaction.php
-├── Voucher.php
 
-app/Http/Requests/
-├── TopUpRequest.php
-├── TransferRequest.php
-├── RegisterRequest.php
-├── LoginRequest.php
+app/Mail/
+├── GoogleOtpMail.php             # (tidak dipakai di alur Google OAuth sekarang)
 
 config/
-├── wallet.php                 # Config: max amount, direct topup, promos
-├── midtrans.php               # Config Midtrans
+├── wallet.php                    # max_transaction_amount, direct_topup_enabled
+├── midtrans.php
 
-database/migrations/           # 11 file migrasi
+database/migrations/
 database/seeders/
-├── DatabaseSeeder.php         # Seed users + vouchers
+├── DatabaseSeeder.php            # Seed 2 demo users
 
-routes/api.php                 # Semua routing API
+routes/api.php
 ```
 
 ### Frontend (`frontend/`)
 ```
 src/
 ├── pages/
-│   ├── Dashboard.jsx          # Halaman utama (saldo, transaksi, promo, modal)
-│   ├── Landing.jsx            # Halaman depan
-│   ├── Login.jsx              # Login
-│   ├── Register.jsx           # Register
-│   ├── Profile.jsx            # Profil & PIN
-│   └── AuthCallback.jsx       # Callback Google OAuth
+│   ├── Dashboard.jsx             # Halaman utama (saldo, transaksi, aksi)
+│   ├── Landing.jsx               # Halaman depan
+│   ├── Login.jsx                 # Login password + Google OAuth
+│   ├── Register.jsx              # Register
+│   ├── Profile.jsx               # Profil & PIN
+│   ├── AuthCallback.jsx          # Penerima redirect Google OAuth + token
+│   └── GoogleOtpVerify.jsx       # Verifikasi OTP Email (login OTP)
 
 ├── components/
-│   ├── TopUpModal.jsx         # Modal top up saldo
-│   ├── TransferModal.jsx      # Modal transfer
-│   ├── PayModal.jsx           # Modal bayar tagihan
-│   ├── ScanQRModal.jsx        # Scan QRIS via kamera
-│   ├── ReceiveQRModal.jsx     # Generate QR untuk terima
-│   ├── PinModal.jsx           # Verifikasi PIN
-│   ├── PinSetupModal.jsx      # Atur PIN
-│   ├── ReceiptModal.jsx       # Bukti transaksi
-│   ├── VoucherModal.jsx       # Redeem voucher
-│   └── ...
+│   ├── TopUpModal.jsx
+│   ├── TransferModal.jsx
+│   ├── PayModal.jsx
+│   ├── ScanQRModal.jsx
+│   ├── ReceiveQRModal.jsx
+│   ├── PinModal.jsx
+│   ├── PinSetupModal.jsx
+│   └── ReceiptModal.jsx
 
 ├── hooks/
-│   ├── useAuth.js             # Hook autentikasi
-│   └── useWallet.js           # Hook wallet (saldo, transaksi)
+│   ├── useAuth.js
+│   └── useWallet.js
 
 ├── lib/
-│   ├── api.js                 # HTTP client wrapper
-│   ├── auth.js                # Manajemen token & sesi
-│   ├── wallet.js              # Format, validasi, filter
-│   └── theme.js               # Design tokens Black + Gold
+│   ├── api.js
+│   ├── auth.js
+│   ├── wallet.js
+│   └── theme.js                  # Design tokens: Black + Gold luxury theme
 ```
