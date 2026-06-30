@@ -43,8 +43,11 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
       const aLen = data.match(/5403(\d+)/)
       if (aLen) prefillAmt = aLen[1]
       if (!name) name = 'Merchant QRIS'
+    } else if (data.startsWith('http://') || data.startsWith('https://')) {
+      try { name = 'QR Link: ' + new URL(data).hostname } catch { name = 'QR Link' }
     } else {
-      name = data.length > 50 ? data.substring(0, 50) + '…' : data
+      // Format proprietary (BNI Wonder, Tokopedia, dll) — bukan QRIS standard
+      name = 'Merchant (QR Non-QRIS)'
     }
 
     setMerchant(name)
