@@ -40,41 +40,37 @@ class SocialAuthController extends Controller
             return redirect("{$frontendUrl}/masuk?error=google_gagal");
         }
 
-        $email = $googleUser->getEmail();
-        $name  = $googleUser->getName() ?: 'Pengguna Google';
+        $email    = $googleUser->getEmail();
+        $name     = $googleUser->getName() ?: 'Pengguna Google';
+        $googleId = $googleUser->getId();
 
-        // Generate 6-digit OTP dan simpan ke cache bersama data Google
-        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        // Cari atau buat user
+        $user = User::where('google_id', $googleId)
+            ->orWhere('email', $email)
+            ->first();
 
-        Cache::put(self::CACHE_PREFIX . $email, [
-            'otp'       => $otp,
-            'google_id' => $googleUser->getId(),
-            'name'      => $name,
-            'email'     => $email,
-        ], self::OTP_TTL);
+        if ($user) {
+            if (! $user->google_id) {
+                $user->update(['google_id' => $googleId]);
+            }
+        } else {
+            $user = User::create([
+                'name'        => $name,
+                'username'    => $this->uniqueUsername($email, $name),
+                'email'       => $email,
+                'google_id'   => $googleId,
+                'password'    => null,
+                'is_approved' => true,
+            ]);
 
-        // Kirim OTP ke Gmail user
-        $mailSent = false;
-        try {
-            Mail::to($email)->send(new GoogleOtpMail($otp, $name));
-            $mailSent = true;
-        } catch (\Throwable $e) {
-            \Log::error('GoogleOTP mail failed: ' . $e->getMessage());
+            $user->wallet()->create(['balance' => 0]);
         }
 
-        // Jika kirim email gagal, redirect ke error (sertakan pesan untuk debug)
-        if (! $mailSent) {
-            return redirect("{$frontendUrl}/masuk?error=otp_gagal");
-        }
+        $token = $user->createToken('api-google')->plainTextToken;
 
-        $params = '?email=' . urlencode($email);
+        $userJson = urlencode(json_encode($user->toApiArray()));
 
-        // Di local/dev: sertakan kode di URL agar bisa ditest tanpa SMTP nyata
-        if (config('app.env') === 'local') {
-            $params .= '&dev_code=' . $otp;
-        }
-
-        return redirect("{$frontendUrl}/auth/google/verifikasi{$params}");
+        return redirect("{$frontendUrl}/auth/callback?token=" . urlencode($token) . "&user={$userJson}");
     }
 
     /**
