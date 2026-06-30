@@ -4,7 +4,7 @@
 | Item | Detail |
 |---|---|
 | Author | Saifudin Reza |
-| Versi | 3.0 |
+| Versi | 4.0 |
 | Tanggal | 30 Juni 2026 |
 | Deadline | 27 Juni 2026, 23.50 WIB |
 
@@ -23,7 +23,7 @@ TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabu
 ## 2. Tujuan
 
 1. Membangun sistem dompet digital dengan integritas transaksi penuh (atomic, rollback-safe).
-2. Menyediakan autentikasi aman (Laravel Sanctum + Google OAuth + OTP Email).
+2. Menyediakan autentikasi aman (Laravel Sanctum + Google OAuth).
 3. Menyediakan dashboard SPA real-time dengan React.
 4. Mengintegrasikan Midtrans Snap sebagai payment gateway top up.
 5. Mendemonstrasikan kemampuan full stack: Laravel API, React SPA, integrasi pihak ketiga.
@@ -36,12 +36,12 @@ TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabu
 |---|---|
 | Backend | Laravel 11, PHP 8.4 |
 | Database | PostgreSQL (production via Neon) / MySQL (local) |
-| Auth | Sanctum (token), Socialite (Google OAuth), OTP Email (Brevo SMTP) |
+| Auth | Sanctum (token), Socialite (Google OAuth) |
 | Payment Gateway | Midtrans Snap (sandbox) |
 | Frontend | React 18, Vite 5, inline styles (design tokens) |
+| QR Scanner | jsQR (cross-browser) + BarcodeDetector API (native Chrome/Edge) |
 | Deployment BE | Docker / Render.com |
 | Deployment FE | Vercel |
-| Email | Brevo SMTP relay |
 
 ---
 
@@ -50,8 +50,7 @@ TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabu
 ### 4.1 Autentikasi
 - Register: name, username, email, password
 - Login: email/username + password → token Sanctum
-- OTP Email (bonus): login tanpa password via kode OTP ke Gmail
-- Google OAuth (bonus): login satu klik via Google → langsung masuk dashboard
+- Google OAuth (bonus): login satu klik via Google → langsung masuk dashboard tanpa OTP
 - Atur & ubah PIN transaksi 6 digit
 - Update profil (nama, username, email)
 
@@ -63,9 +62,11 @@ TrustPay adalah aplikasi **dompet digital (e-wallet)** dengan konsep **Buku Tabu
 - Riwayat transaksi lengkap
 
 ### 4.3 QRIS
-- **Scan QRIS**: kamera langsung (BarcodeDetector API) baca QRIS merchant → bayar otomatis
-- Demo mode untuk browser yang tidak mendukung kamera
-- **Terima QR**: generate QR untuk menerima transfer
+- **Scan QRIS**: kamera langsung → jsQR decode frame via canvas → tampil form bayar
+  - Format QRIS standard (EMV): nama merchant & nominal otomatis terbaca
+  - Format QR lain (URL, proprietary): terdeteksi, nominal diisi manual
+  - Demo mode untuk presentasi (simulasi QRIS merchant)
+- **Terima QR**: generate QR Code untuk menerima transfer dari pengguna lain
 
 ### 4.4 Keamanan Transaksi
 - PIN 6 digit wajib untuk setiap transfer dan pembayaran
@@ -124,10 +125,8 @@ users (1) ────── (n) transactions
 |---|---|---|---|
 | POST | `/api/register` | ✗ | Daftar akun baru |
 | POST | `/api/login` | ✗ | Login email/username + password |
-| POST | `/api/login/request-otp` | ✗ | Minta OTP ke Email |
-| POST | `/api/verify-otp` | ✗ | Verifikasi OTP Email |
-| GET | `/api/auth/google/redirect` | ✗ | Redirect ke Google OAuth |
-| GET | `/api/auth/google/callback` | ✗ | Callback Google → langsung terbit token |
+| GET | `/api/auth/google/redirect` | ✗ | Redirect ke Google OAuth (prompt: select_account) |
+| GET | `/api/auth/google/callback` | ✗ | Callback Google → langsung terbit token Sanctum |
 | POST | `/api/logout` | ✓ | Hapus sesi |
 | GET | `/api/me` | ✓ | Data user saat ini |
 | PUT | `/api/me` | ✓ | Update profil |
@@ -161,9 +160,15 @@ users (1) ────── (n) transactions
 2. Backend validasi saldo → potong saldo → catat transaksi PAYMENT
 
 ### Google OAuth
-1. User klik "Lanjutkan dengan Google" → redirect ke Google
-2. Google callback → backend cari/buat user → terbit token Sanctum
+1. User klik "Lanjutkan dengan Google" → redirect ke Google (tampil account picker)
+2. Google callback → backend cari/buat user → langsung terbit token Sanctum
 3. Redirect ke `/auth/callback?token=...&user=...` → frontend simpan sesi → dashboard
+
+### Scan QRIS
+1. User buka Scan QRIS → izin kamera → video feed aktif
+2. jsQR snapshot canvas tiap 200ms → decode QR Code
+3. Jika QRIS standard (EMV) → nama merchant & nominal terbaca otomatis
+4. User konfirmasi nominal + PIN → `POST /pay` → saldo terpotong
 
 ---
 
@@ -173,7 +178,7 @@ users (1) ────── (n) transactions
 # Backend
 cd backend
 composer install
-cp .env.example .env   # edit DB, Midtrans, Google OAuth, Mail (Brevo)
+cp .env.example .env   # edit DB, Midtrans, Google OAuth
 php artisan key:generate
 php artisan migrate
 php artisan serve
@@ -195,14 +200,11 @@ npm run dev
 |---|---|
 | `APP_ENV` | `production` |
 | `DB_CONNECTION` | `pgsql` |
+| `FRONTEND_URL` | `https://trust-pay-blush.vercel.app` |
 | `GOOGLE_CLIENT_ID` | Client ID dari Google Cloud Console |
 | `GOOGLE_CLIENT_SECRET` | Client Secret Google |
-| `MAIL_HOST` | `smtp-relay.brevo.com` |
-| `MAIL_PORT` | `587` |
-| `MAIL_USERNAME` | Login Brevo |
-| `MAIL_PASSWORD` | SMTP Key Brevo |
 | `MIDTRANS_SERVER_KEY` | Key Midtrans sandbox |
-| `OTP_CHANNEL` | `mail` |
+| `MIDTRANS_CLIENT_KEY` | Client Key Midtrans sandbox |
 | `DIRECT_TOPUP_ENABLED` | `true` (demo) |
 
 ---
@@ -236,6 +238,7 @@ npm run dev
 - **PIN transaksi**: setiap transfer/pay wajib verifikasi PIN 6 digit (bcrypt)
 - **Authorization**: user hanya bisa akses data milik sendiri
 - **Token di cookie**: token disimpan di cookie (SameSite=Strict) bukan localStorage
+- **Google OAuth account picker**: `prompt=select_account` memaksa Google selalu tampil pilihan akun
 
 ---
 
@@ -261,26 +264,19 @@ npm run dev
 ### Backend (`backend/`)
 ```
 app/Http/Controllers/
-├── AuthController.php            # Register, Login, Logout, OTP Email
+├── AuthController.php            # Register, Login, Logout
 ├── WalletController.php          # Wallet, TopUp, Transfer, Pay
 ├── ProfileController.php         # Update profil, PIN
-├── SocialAuthController.php      # Google OAuth (direct token)
+├── SocialAuthController.php      # Google OAuth (direct token, prompt=select_account)
 ├── MidtransWebhookController.php
 
 app/Services/
 ├── WalletService.php             # Logic bisnis wallet
-├── OtpService.php                # Logic OTP Email
-app/Services/Otp/
-├── MailOtpChannel.php            # Kirim OTP via SMTP (Brevo)
-├── LogOtpChannel.php             # Fallback log (dev)
 
 app/Models/
 ├── User.php
 ├── Wallet.php
 ├── Transaction.php
-
-app/Mail/
-├── GoogleOtpMail.php             # (tidak dipakai di alur Google OAuth sekarang)
 
 config/
 ├── wallet.php                    # max_transaction_amount, direct_topup_enabled
@@ -302,14 +298,13 @@ src/
 │   ├── Login.jsx                 # Login password + Google OAuth
 │   ├── Register.jsx              # Register
 │   ├── Profile.jsx               # Profil & PIN
-│   ├── AuthCallback.jsx          # Penerima redirect Google OAuth + token
-│   └── GoogleOtpVerify.jsx       # Verifikasi OTP Email (login OTP)
+│   └── AuthCallback.jsx          # Penerima redirect Google OAuth + token
 
 ├── components/
 │   ├── TopUpModal.jsx
 │   ├── TransferModal.jsx
 │   ├── PayModal.jsx
-│   ├── ScanQRModal.jsx
+│   ├── ScanQRModal.jsx           # jsQR + canvas scanning + demo mode
 │   ├── ReceiveQRModal.jsx
 │   ├── PinModal.jsx
 │   ├── PinSetupModal.jsx
