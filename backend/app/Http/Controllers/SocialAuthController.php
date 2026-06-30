@@ -27,7 +27,7 @@ class SocialAuthController extends Controller
 
     public function redirectToGoogle(): RedirectResponse
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        return Socialite::driver('google')->stateless()->with(['prompt' => 'select_account'])->redirect();
     }
 
     public function handleGoogleCallback(): RedirectResponse
