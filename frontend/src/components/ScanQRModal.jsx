@@ -1,52 +1,61 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import jsQR from 'jsqr'
 import { Overlay, SubmitButton, modalTitle, closeBtn, label } from './TopUpModal.jsx'
 import { CloseIcon, AlertIcon, CheckIcon, CameraIcon } from './icons.jsx'
 import { group, validateNominal, fmtRp } from '../lib/wallet.js'
 import { T, FONT } from '../lib/theme.js'
 
-/**
- * ScanQRModal — scan QRIS merchant via kamera, lalu konfirmasi pembayaran.
- *
- * Browser support:
- *  - Chrome/Edge/Safari → BarcodeDetector API (built-in, tidak perlu package)
- *  - Browser lain     → mode demo (simulasi QR merchant untuk presentasi)
- *
- * Flow:
- *  1. Minta izin kamera → tampilkan video feed + overlay scan
- *  2. BarcodeDetector decode setiap frame → jika QR ditemukan → tampilkan form bayar
- *  3. User masukkan nominal (atau sudah terisi dari QR) → confirm → onPay()
- */
 export default function ScanQRModal({ balance, onClose, onPay }) {
-  const videoRef  = useRef(null)
-  const streamRef = useRef(null)
-  const rafRef    = useRef(null)
+  const videoRef   = useRef(null)
+  const canvasRef  = useRef(null)
+  const streamRef  = useRef(null)
+  const timerRef   = useRef(null)
 
-  const [phase, setPhase]         = useState('init')    // init | scanning | found | no-support | cam-error
-  const [merchant, setMerchant]   = useState('')
-  const [raw, setRaw]             = useState('')
+  const [phase, setPhase]           = useState('init')
+  const [merchant, setMerchant]     = useState('')
+  const [raw, setRaw]               = useState('')
   const [rawTouched, setRawTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [balErr, setBalErr]       = useState(false)
+  const [balErr, setBalErr]         = useState(false)
 
   const v       = validateNominal(raw)
   const showErr = rawTouched && !!v.err
   const amt     = v.n || 0
   const canPay  = !v.err && amt > 0 && amt <= balance && !submitting
 
-  // Bersihkan stream kamera saat modal ditutup
   const stopCam = useCallback(() => {
+    clearTimeout(timerRef.current)
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-    if (rafRef.current)    cancelAnimationFrame(rafRef.current)
+    streamRef.current = null
   }, [])
 
-  useEffect(() => {
-    if (!('BarcodeDetector' in window)) {
-      setPhase('no-support')
-      return
+  const processQR = useCallback((data) => {
+    let name = ''
+    let prefillAmt = ''
+
+    if (data.startsWith('00020101') || data.startsWith('000201')) {
+      const mLen = data.match(/5902(\d{2})/)
+      if (mLen) {
+        const len = parseInt(mLen[1], 10)
+        const idx = data.indexOf(mLen[0]) + mLen[0].length
+        name = data.substring(idx, idx + len).trim()
+      }
+      const aLen = data.match(/5403(\d+)/)
+      if (aLen) prefillAmt = aLen[1]
+      if (!name) name = 'Merchant QRIS'
+    } else {
+      name = data.length > 50 ? data.substring(0, 50) + '…' : data
     }
 
-    const detector = new window.BarcodeDetector({ formats: ['qr_code'] })
+    setMerchant(name)
+    if (prefillAmt && parseInt(prefillAmt, 10) > 0) {
+      setRaw(group(parseInt(prefillAmt, 10)))
+    }
+    setPhase('found')
+  }, [])
 
+  const startCamera = useCallback(() => {
+    setPhase('init')
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: 640, height: 480 } })
       .then(stream => {
@@ -58,60 +67,66 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
         setPhase('scanning')
 
         const scan = () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) {
-            rafRef.current = requestAnimationFrame(scan)
+          const video  = videoRef.current
+          const canvas = canvasRef.current
+          if (!video || !canvas || video.readyState < 2) {
+            timerRef.current = setTimeout(scan, 150)
             return
           }
-          detector.detect(videoRef.current)
-            .then(codes => {
-              if (codes.length > 0) {
-                stopCam()
-                processQR(codes[0].rawValue)
-              } else {
-                rafRef.current = requestAnimationFrame(scan)
-              }
-            })
-            .catch(() => { rafRef.current = requestAnimationFrame(scan) })
+
+          const w = video.videoWidth
+          const h = video.videoHeight
+          if (!w || !h) { timerRef.current = setTimeout(scan, 150); return }
+
+          canvas.width  = w
+          canvas.height = h
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })
+          ctx.drawImage(video, 0, 0, w, h)
+          const imageData = ctx.getImageData(0, 0, w, h)
+
+          // jsQR — works in all browsers
+          const code = jsQR(imageData.data, w, h, { inversionAttempts: 'dontInvert' })
+          if (code) {
+            stopCam()
+            processQR(code.data)
+            return
+          }
+
+          // BarcodeDetector — native, faster (Chrome/Edge)
+          if ('BarcodeDetector' in window) {
+            new window.BarcodeDetector({ formats: ['qr_code'] })
+              .detect(canvas)
+              .then(codes => {
+                if (codes.length > 0) { stopCam(); processQR(codes[0].rawValue) }
+                else { timerRef.current = setTimeout(scan, 200) }
+              })
+              .catch(() => { timerRef.current = setTimeout(scan, 200) })
+          } else {
+            timerRef.current = setTimeout(scan, 200)
+          }
         }
-        rafRef.current = requestAnimationFrame(scan)
+
+        timerRef.current = setTimeout(scan, 300)
       })
       .catch(() => setPhase('cam-error'))
+  }, [stopCam, processQR])
 
+  useEffect(() => {
+    startCamera()
     return stopCam
-  }, [stopCam])
+  }, [startCamera, stopCam])
 
-  const processQR = (data) => {
-    let name = ''
-    let prefillAmt = ''
-
-    if (data.startsWith('00020101') || data.startsWith('000201')) {
-      // Coba ambil nama merchant dari format QRIS (tag 59 = merchant name)
-      const mLen = data.match(/5902(\d{2})/)
-      if (mLen) {
-        const len = parseInt(mLen[1], 10)
-        const idx = data.indexOf(mLen[0]) + mLen[0].length
-        name = data.substring(idx, idx + len).trim()
-      }
-      // Tag 54 = transaction amount
-      const aLen = data.match(/5403(\d+)/)
-      if (aLen) prefillAmt = aLen[1]
-
-      if (!name) name = 'Merchant QRIS'
-    } else {
-      name = data.length > 50 ? data.substring(0, 50) + '…' : data
-    }
-
-    setMerchant(name)
-    if (prefillAmt && parseInt(prefillAmt, 10) > 0) {
-      setRaw(group(parseInt(prefillAmt, 10)))
-    }
-    setPhase('found')
-  }
-
-  // Mode demo: simulasi QR merchant yang terdeteksi
   const runDemo = () => {
     stopCam()
     processQR('00020101021226580016ID.CO.BCA.WWW011893600023010292000007202030359140014WARTEG SEDERHANA6007JAKARTA')
+  }
+
+  const handleScanUlang = () => {
+    setMerchant('')
+    setRaw('')
+    setRawTouched(false)
+    setBalErr(false)
+    startCamera()
   }
 
   const handlePay = () => {
@@ -131,19 +146,19 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
 
   return (
     <Overlay onClose={() => { stopCam(); onClose() }}>
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
       <div
         onClick={e => e.stopPropagation()}
         style={{ width: 430, maxWidth: '100%', background: T.surface, borderRadius: 22, overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: '0 40px 90px -24px rgba(0,0,0,0.85)', animation: 'popIn .24s cubic-bezier(.2,.8,.3,1)' }}
       >
         <div style={{ height: 4, background: T.btnGrad }} />
 
-        {/* header */}
         <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={modalTitle}>Scan QRIS</h3>
           <button onClick={() => { stopCam(); onClose() }} style={closeBtn} aria-label="Tutup"><CloseIcon size={18} /></button>
         </div>
 
-        {/* ===== INIT / SCANNING — camera feed ===== */}
+        {/* Camera feed */}
         {(phase === 'init' || phase === 'scanning') && (
           <>
             <div style={{ margin: '18px 0 0', position: 'relative', background: '#0C0E11', height: 280, overflow: 'hidden' }}>
@@ -153,14 +168,12 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
                 playsInline
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
-              {/* overlay sudut scan */}
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 200, height: 200, position: 'relative' }}>
                   <Corner pos={{ top: 0, left: 0 }} b={{ right: 'none', bottom: 'none' }} br="4px 0 0 0" />
                   <Corner pos={{ top: 0, right: 0 }} b={{ left: 'none', bottom: 'none' }} br="0 4px 0 0" />
                   <Corner pos={{ bottom: 0, left: 0 }} b={{ right: 'none', top: 'none' }} br="0 0 0 4px" />
                   <Corner pos={{ bottom: 0, right: 0 }} b={{ left: 'none', top: 'none' }} br="0 0 4px 0" />
-                  {/* scan line */}
                   <div style={{ position: 'absolute', left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, #F5CE53 30%, #F5CE53 70%, transparent)', animation: 'scanLine 2.4s linear infinite' }} />
                 </div>
               </div>
@@ -182,39 +195,33 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
           </>
         )}
 
-        {/* ===== NO SUPPORT ===== */}
+        {/* No support */}
         {phase === 'no-support' && (
           <div style={{ padding: '28px 24px 24px', textAlign: 'center' }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: T.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', color: T.muted }}>
               <CameraIcon size={26} />
             </div>
             <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: T.ink }}>Browser tidak mendukung</p>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: T.muted }}>Scan QR otomatis membutuhkan Chrome / Edge / Safari. Gunakan mode demo untuk presentasi.</p>
-            <button
-              onClick={runDemo}
-              style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: T.btnGrad, color: T.onGold, fontFamily: FONT.sans, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-            >
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: T.muted }}>Gunakan mode demo untuk presentasi.</p>
+            <button onClick={runDemo} style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: T.btnGrad, color: T.onGold, fontFamily: FONT.sans, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
               Demo: Scan Merchant
             </button>
           </div>
         )}
 
-        {/* ===== CAM ERROR ===== */}
+        {/* Cam error */}
         {phase === 'cam-error' && (
           <div style={{ padding: '28px 24px 24px', textAlign: 'center' }}>
             <div style={{ color: T.outRose, marginBottom: 12, display: 'flex', justifyContent: 'center' }}><AlertIcon size={36} /></div>
             <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: T.ink }}>Kamera tidak dapat diakses</p>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: T.muted }}>Pastikan izin kamera sudah diberikan di browser, atau gunakan mode demo.</p>
-            <button
-              onClick={runDemo}
-              style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: T.btnGrad, color: T.onGold, fontFamily: FONT.sans, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-            >
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: T.muted }}>Pastikan izin kamera sudah diberikan, atau gunakan mode demo.</p>
+            <button onClick={runDemo} style={{ width: '100%', padding: '14px 0', borderRadius: 12, border: 'none', background: T.btnGrad, color: T.onGold, fontFamily: FONT.sans, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
               Demo: Scan Merchant
             </button>
           </div>
         )}
 
-        {/* ===== QR DITEMUKAN — form bayar ===== */}
+        {/* QR found */}
         {phase === 'found' && (
           <div style={{ padding: '20px 24px 26px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.25)', marginBottom: 22 }}>
@@ -235,7 +242,7 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
                 inputMode="numeric"
                 placeholder="0"
                 autoFocus
-                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT.mono, fontSize: 20, color: T.ink, fontFeatureSettings: "'tnum'" }}
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT.mono, fontSize: 20, color: T.ink }}
               />
             </div>
             {showErr && <div style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 12, color: T.outRose, marginBottom: 4 }}>{v.err}</div>}
@@ -253,7 +260,7 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
             </div>
 
             <button
-              onClick={() => { setPhase('no-support') }}
+              onClick={handleScanUlang}
               style={{ width: '100%', marginTop: 10, padding: '11px 0', borderRadius: 12, border: `1px solid ${T.border}`, background: 'transparent', color: T.muted, fontFamily: FONT.sans, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
             >
               ← Scan ulang
@@ -265,12 +272,10 @@ export default function ScanQRModal({ balance, onClose, onPay }) {
   )
 }
 
-// Sudut bingkai scan
 function Corner({ pos, b, br }) {
   return (
     <div style={{
-      position: 'absolute',
-      ...pos,
+      position: 'absolute', ...pos,
       width: 28, height: 28,
       border: '3px solid #F5CE53',
       borderRightWidth: b.right !== undefined ? 0 : 3,
